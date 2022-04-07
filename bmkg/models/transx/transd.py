@@ -15,8 +15,8 @@ class TransD(TransX):
 		self.epsilon = epsilon
 		self.norm_flag = norm_flag
 		self.p_norm = p_norm
-		self.ent_transfer = nn.Embedding(self.ent_tot, self.dim_e)
-		self.rel_transfer = nn.Embedding(self.rel_tot, self.dim_r)
+		self.ent_transfer = nn.Embedding(config.rel_size, self.dim_e)
+		self.rel_transfer = nn.Embedding(config.rel_size, self.dim_r)
 
 		if margin == None or epsilon == None:
 			nn.init.xavier_uniform_(self.ent_embed.weight.data)

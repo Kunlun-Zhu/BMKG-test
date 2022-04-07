@@ -9,7 +9,7 @@ class SimplE(BaseSemantic):
         super(SimplE, self).__init__(config)
 
         self.dim = dim
-        self.rel_inv_embeddings = nn.Embedding(self.rel_tot, self.dim)
+        self.rel_inv_embeddings = nn.Embedding(config.rel_size, self.dim)
 
         nn.init.xavier_uniform_(self.ent_embed.weight.data)
         nn.init.xavier_uniform_(self.rel_embed.weight.data)
