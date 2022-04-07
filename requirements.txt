@@ -1,0 +1,8 @@
+numpy~=1.21.2
+tqdm~=4.63.1
+setuptools~=58.0.4
+pytorch~=1.11.0
+bmkg~=0.1.0
+wandb~=0.12.12
+pycodestyle~=2.8.0
+pygithub~=1.55
