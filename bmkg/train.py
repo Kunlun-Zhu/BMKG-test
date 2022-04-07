@@ -5,10 +5,14 @@ from typing import Type
 from .models import BMKGModel
 from .models.transx.transe import TransE
 from .models.transx.transr import TransR
+from .models.transx.transH import TransH
+from .models.transx.transD import TransD
 
 models: dict[str, : Type[BMKGModel]] = {
     'TransE': TransE,
-    'TransR': TransR
+    'TransR': TransR,
+    'TransH': TransH,
+    'TransD': TransD
 }
 
 
