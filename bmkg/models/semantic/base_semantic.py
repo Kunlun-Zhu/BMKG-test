@@ -8,7 +8,7 @@ from torch import nn
 
 
 class BaseSemantic(BMKGModel, ABC):
-    def __init__(self, config: argparse.Namespace):
+    def __init__(self, config):
         super(BaseSemantic, self).__init__()
         self.ent_embed = nn.Embedding(config.ent_size, config.emb_dim)
         self.rel_embed = nn.Embedding(config.rel_size, config.rel_dim)

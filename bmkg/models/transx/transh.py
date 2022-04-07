@@ -7,7 +7,7 @@ from .transx import TransX
 class TransH(TransX):
 
 	def __init__(self,config: argparse.Namespace, dim = 100, p_norm = 1, norm_flag = True, margin = None, epsilon = None):
-		super(TransH, self).__init__(config: argparse.Namespace)
+		super(TransH, self).__init__(config)
 		
 		self.dim = dim
 		self.margin = margin
