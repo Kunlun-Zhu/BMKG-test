@@ -5,10 +5,10 @@ from .semantic import BaseSemantic
 
 class RESCAL(BaseSemantic):
 
-	def __init__(self, config: argparse.Namespace, dim = 100):
+	def __init__(self, config: argparse.Namespace):
 		super(RESCAL, self).__init__(config)
 
-		self.dim = dim
+		self.dim = config.dim
 		self.rel_matrices = nn.Embedding(config.rel_size, self.dim * self.dim)
 		
 		nn.init.xavier_uniform_(self.ent_embed.weight.data)

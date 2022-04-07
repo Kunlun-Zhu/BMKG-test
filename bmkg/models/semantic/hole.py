@@ -7,10 +7,10 @@ from numpy import fft
 
 class HolE(BaseSemantic):
 
-	def __init__(self, config: argparse.Namespace, dim = 100, margin = None, epsilon = None):
+	def __init__(self, config: argparse.Namespace, margin = None, epsilon = None):
 		super(HolE, self).__init__(config)
 
-		self.dim = dim
+		self.dim = config.dim
 		self.margin = margin
 		self.epsilon = epsilon
 

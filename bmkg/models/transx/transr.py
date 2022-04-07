@@ -36,7 +36,7 @@ class TransR(TransX):
 		else:
 			self.margin_flag = False
 
-	def _calc(self, h, t, r):
+	def _calc(self, h, t, r, mode):
 		"""
         _calc defines the main methods to calculate the score
 

@@ -6,10 +6,10 @@ from .transx import TransX
 
 class TransH(TransX):
 
-	def __init__(self,config: argparse.Namespace, dim = 100, p_norm = 1, norm_flag = True, margin = None, epsilon = None):
+	def __init__(self,config: argparse.Namespace, p_norm = 1, norm_flag = True, margin = None, epsilon = None):
 		super(TransH, self).__init__(config)
 		
-		self.dim = dim
+		self.dim = config.dim
 		self.margin = margin
 		self.epsilon = epsilon
 		self.norm_flag = norm_flag

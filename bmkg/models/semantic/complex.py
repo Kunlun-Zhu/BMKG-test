@@ -4,10 +4,10 @@ import argparse
 from .semantic import BaseSemantic
 
 class ComplEx(BaseSemantic):
-    def __init__(self, config: argparse.Namespace, dim = 100):
+    def __init__(self, config: argparse.Namespace):
         super(ComplEx, self).__init__(config)
 
-        self.dim = dim
+        self.dim = config.dim
         self.ent_re_embeddings = nn.Embedding(config.ent_size, self.dim)
         self.ent_im_embeddings = nn.Embedding(config.ent_size, self.dim)
         self.rel_re_embeddings = nn.Embedding(config.rel_size, self.dim)

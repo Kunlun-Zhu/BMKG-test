@@ -6,14 +6,14 @@ from .semantic import BaseSemantic
 
 class RotatE(BaseSemantic):
 
-	def __init__(self, config: argparse.Namespace, dim = 100, margin = 6.0, epsilon = 2.0):
+	def __init__(self, config: argparse.Namespace, margin = 6.0, epsilon = 2.0):
 		super(RotatE, self).__init__(config)
 
 		self.margin = margin
 		self.epsilon = epsilon
 
-		self.dim_e = dim * 2
-		self.dim_r = dim
+		self.dim_e = config.dim * 2
+		self.dim_r = config.dim
 
 		self.ent_embedding_range = nn.Parameter(
 			torch.Tensor([(self.margin + self.epsilon) / self.dim_e]), 

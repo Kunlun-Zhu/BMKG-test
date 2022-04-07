@@ -5,10 +5,10 @@ from .semantic import BaseSemantic
 
 class DistMult(BaseSemantic):
 
-	def __init__(self, config: argparse.Namespace, dim = 100, margin = None, epsilon = None):
+	def __init__(self, config: argparse.Namespace, margin = None, epsilon = None):
 		super(DistMult, self).__init__(config)
 
-		self.dim = dim
+		self.dim = config.dim
 		self.margin = margin
 		self.epsilon = epsilon
 

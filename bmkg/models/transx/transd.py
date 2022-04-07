@@ -9,8 +9,8 @@ class TransD(TransX):
 	def __init__(self,config: argparse.Namespace, dim_e = 100, dim_r = 100, p_norm = 1, norm_flag = True, margin = None, epsilon = None):
 		super(TransD, self).__init__(config)
 		
-		self.dim_e = dim_e
-		self.dim_r = dim_r
+		self.dim_e = config.dim
+		self.dim_r = config.dim
 		self.margin = margin
 		self.epsilon = epsilon
 		self.norm_flag = norm_flag

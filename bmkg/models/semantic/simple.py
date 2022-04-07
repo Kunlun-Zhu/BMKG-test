@@ -5,10 +5,10 @@ from .semantic import BaseSemantic
 
 class SimplE(BaseSemantic):
 
-    def __init__(self, config: argparse.Namespace, dim = 100):
+    def __init__(self, config: argparse.Namespace):
         super(SimplE, self).__init__(config)
 
-        self.dim = dim
+        self.dim = config.dim
         self.rel_inv_embeddings = nn.Embedding(config.rel_size, self.dim)
 
         nn.init.xavier_uniform_(self.ent_embed.weight.data)
