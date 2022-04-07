@@ -6,11 +6,11 @@ from .transx import TransX
 
 class TransR(TransX):
 
-	def __init__(self,config: argparse.Namespace, dim_e = 100, dim_r = 100, p_norm = 1, norm_flag = True, rand_init = False, margin = None):
+	def __init__(self,config: argparse.Namespace, p_norm = 1, norm_flag = True, rand_init = False, margin = None):
 		super(TransR, self).__init__(config)
 		
-		self.dim_e = dim_e
-		self.dim_r = dim_r
+		self.dim_e = config.dim
+		self.dim_r = config.dim
 		self.norm_flag = norm_flag
 		self.p_norm = p_norm
 		self.rand_init = rand_init
