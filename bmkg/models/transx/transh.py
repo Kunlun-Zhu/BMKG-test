@@ -26,12 +26,12 @@ class TransH(TransX):
 				torch.Tensor([(self.margin + self.epsilon) / self.dim]), requires_grad=False
 			)
 			nn.init.uniform_(
-				tensor = self.ent_embeddings.weight.data, 
+				tensor = self.ent_embed.weight.data, 
 				a = -self.embedding_range.item(), 
 				b = self.embedding_range.item()
 			)
 			nn.init.uniform_(
-				tensor = self.rel_embeddings.weight.data, 
+				tensor = self.rel_embed.weight.data, 
 				a= -self.embedding_range.item(), 
 				b= self.embedding_range.item()
 			)
