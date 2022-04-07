@@ -15,9 +15,6 @@ class RotatE(BaseSemantic):
 		self.dim_e = dim * 2
 		self.dim_r = dim
 
-		self.ent_embeddings = nn.Embedding(config.ent_size, self.dim_e)
-		self.rel_embeddings = nn.Embedding(config.rel_size, self.dim_r)
-
 		self.ent_embedding_range = nn.Parameter(
 			torch.Tensor([(self.margin + self.epsilon) / self.dim_e]), 
 			requires_grad=False
@@ -98,8 +95,8 @@ class RotatE(BaseSemantic):
 		batch_t = t
 		batch_r = r
 		mode = "head_batch"
-		h = self.ent_embeddings(batch_h)
-		t = self.ent_embeddings(batch_t)
-		r = self.rel_embeddings(batch_r)
+		h = self.ent_embed(batch_h)
+		t = self.ent_embed(batch_t)
+		r = self.rel_embed(batch_r)
 		score = self.margin - self._calc(h ,t, r, mode)
 		return score

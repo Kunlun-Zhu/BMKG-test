@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import argparse
-from .transx import BaseTrans
+from .transx import TransX
 
-class TransR(BaseTrans):
+class TransR(TransX):
 
 	def __init__(self,config: argparse.Namespace, dim_e = 100, dim_r = 100, p_norm = 1, norm_flag = True, rand_init = False, margin = None):
 		super(TransR, self).__init__(config: argparse.Namespace)
@@ -15,8 +15,6 @@ class TransR(BaseTrans):
 		self.p_norm = p_norm
 		self.rand_init = rand_init
 
-		self.ent_embeddings = nn.Embedding(config.ent_size, self.dim_e)
-		self.rel_embeddings = nn.Embedding(config.rel_size, self.dim_r)
 		nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
 		nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
 
@@ -86,9 +84,9 @@ class TransR(BaseTrans):
 		batch_t = t
 		batch_r = r
 		mode = 'normal'
-		h = self.ent_embeddings(batch_h)
-		t = self.ent_embeddings(batch_t)
-		r = self.rel_embeddings(batch_r)
+		h = self.ent_embed(batch_h)
+		t = self.ent_embed(batch_t)
+		r = self.rel_embed(batch_r)
 		r_transfer = self.transfer_matrix(batch_r)
 		h = self._transfer(h, r_transfer)
 		t = self._transfer(t, r_transfer)

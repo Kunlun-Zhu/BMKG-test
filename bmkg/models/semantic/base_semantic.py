@@ -10,9 +10,9 @@ from torch import nn
 class BaseSemantic(BMKGModel, ABC):
     def __init__(self, config: argparse.Namespace):
         super(BaseSemantic, self).__init__()
-        #self.ent_embed = nn.Embedding(config.ent_size, config.emb_dim)
-        #self.rel_embed = nn.Embedding(config.rel_size, config.rel_dim)
-        #self.gamma = config.gamma
+        self.ent_embed = nn.Embedding(config.ent_size, config.emb_dim)
+        self.rel_embed = nn.Embedding(config.rel_size, config.rel_dim)
+        self.gamma = config.gamma
 
     @abstractmethod
     def scoring_function(self, heads, rels, tails, *args):

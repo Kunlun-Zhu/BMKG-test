@@ -13,8 +13,6 @@ class HolE(BaseSemantic):
 		self.dim = dim
 		self.margin = margin
 		self.epsilon = epsilon
-		self.ent_embeddings = nn.Embedding(config.ent_size, self.dim)
-		self.rel_embeddings = nn.Embedding(config.rel_size, self.dim)
 
 		if margin == None or epsilon == None:
 			nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
@@ -96,8 +94,8 @@ class HolE(BaseSemantic):
 		batch_t = t
 		batch_r = r
 		mode = 'normal'
-		h = self.ent_embeddings(batch_h)
-		t = self.ent_embeddings(batch_t)
-		r = self.rel_embeddings(batch_r)
+		h = self.ent_embed(batch_h)
+		t = self.ent_embed(batch_t)
+		r = self.rel_embed(batch_r)
 		score = self._calc(h ,t, r, mode)
 		return score

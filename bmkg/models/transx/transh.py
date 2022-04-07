@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import argparse
-from .transx import BaseTrans
+from .transx import TransX
 
-class TransH(BaseTrans):
+class TransH(TransX):
 
 	def __init__(self,config: argparse.Namespace, dim = 100, p_norm = 1, norm_flag = True, margin = None, epsilon = None):
 		super(TransH, self).__init__(config: argparse.Namespace)
@@ -15,8 +15,6 @@ class TransH(BaseTrans):
 		self.norm_flag = norm_flag
 		self.p_norm = p_norm
 
-		self.ent_embeddings = nn.Embedding(config.ent_size, self.dim_e)
-		self.rel_embeddings = nn.Embedding(config.rel_size, self.dim_r)
 		self.norm_vector = nn.Embedding(self.rel_tot, self.dim)
 
 		if margin == None or epsilon == None:
@@ -98,9 +96,9 @@ class TransH(BaseTrans):
 		batch_t = t
 		batch_r = r
 		mode = 'normal'
-		h = self.ent_embeddings(batch_h)
-		t = self.ent_embeddings(batch_t)
-		r = self.rel_embeddings(batch_r)
+		h = self.ent_embed(batch_h)
+		t = self.ent_embed(batch_t)
+		r = self.rel_embed(batch_r)
 		r_norm = self.norm_vector(batch_r)
 		h = self._transfer(h, r_norm)
 		t = self._transfer(t, r_norm)

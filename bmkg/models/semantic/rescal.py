@@ -9,9 +9,6 @@ class RESCAL(BaseSemantic):
 		super(RESCAL, self).__init__(config)
 
 		self.dim = dim
-		self.ent_embeddings = nn.Embedding(config.ent_size, self.dim)
-		self.rel_matrices = nn.Embedding(config.rel_size, self.dim * self.dim)
-
 		nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
 		nn.init.xavier_uniform_(self.rel_matrices.weight.data)
 	
@@ -43,9 +40,9 @@ class RESCAL(BaseSemantic):
 		batch_h = h
 		batch_t = t
 		batch_r = r
-		h = self.ent_embeddings(batch_h)
-		t = self.ent_embeddings(batch_t)
-		r = self.rel_matrices(batch_r)
+		h = self.ent_embed(batch_h)
+		t = self.ent_embed(batch_t)
+		r = self.rel_embed(batch_r)
 		score = self._calc(h ,t, r)
 		return score
 
