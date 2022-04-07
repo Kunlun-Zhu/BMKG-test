@@ -9,9 +9,10 @@ class SimplE(BaseSemantic):
         super(SimplE, self).__init__(config)
 
         self.dim = dim
+        self.rel_inv_embeddings = nn.Embedding(self.rel_tot, self.dim)
 
-        nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
-        nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
+        nn.init.xavier_uniform_(self.ent_embed.weight.data)
+        nn.init.xavier_uniform_(self.rel_embed.weight.data)
         nn.init.xavier_uniform_(self.rel_inv_embeddings.weight.data)
 
     def _calc_avg(self, h, t, r, r_inv):

@@ -15,19 +15,19 @@ class HolE(BaseSemantic):
 		self.epsilon = epsilon
 
 		if margin == None or epsilon == None:
-			nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
-			nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
+			nn.init.xavier_uniform_(self.ent_embed.weight.data)
+			nn.init.xavier_uniform_(self.rel_embed.weight.data)
 		else:
 			self.embedding_range = nn.Parameter(
 				torch.Tensor([(self.margin + self.epsilon) / self.dim]), requires_grad=False
 			)
 			nn.init.uniform_(
-				tensor = self.ent_embeddings.weight.data, 
+				tensor = self.ent_embed.weight.data, 
 				a = -self.embedding_range.item(), 
 				b = self.embedding_range.item()
 			)
 			nn.init.uniform_(
-				tensor = self.rel_embeddings.weight.data, 
+				tensor = self.rel_embed.weight.data, 
 				a= -self.embedding_range.item(), 
 				b= self.embedding_range.item()
 			)

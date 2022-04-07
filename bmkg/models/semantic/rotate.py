@@ -21,7 +21,7 @@ class RotatE(BaseSemantic):
 		)
 
 		nn.init.uniform_(
-			tensor = self.ent_embeddings.weight.data, 
+			tensor = self.ent_embed.weight.data, 
 			a=-self.ent_embedding_range.item(), 
 			b=self.ent_embedding_range.item()
 		)
@@ -32,7 +32,7 @@ class RotatE(BaseSemantic):
 		)
 
 		nn.init.uniform_(
-			tensor = self.rel_embeddings.weight.data, 
+			tensor = self.rel_embed.weight.data, 
 			a=-self.rel_embedding_range.item(), 
 			b=self.rel_embedding_range.item()
 		)

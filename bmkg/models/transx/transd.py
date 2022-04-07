@@ -19,8 +19,8 @@ class TransD(TransX):
 		self.rel_transfer = nn.Embedding(self.rel_tot, self.dim_r)
 
 		if margin == None or epsilon == None:
-			nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
-			nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
+			nn.init.xavier_uniform_(self.ent_embed.weight.data)
+			nn.init.xavier_uniform_(self.rel_embed.weight.data)
 			nn.init.xavier_uniform_(self.ent_transfer.weight.data)
 			nn.init.xavier_uniform_(self.rel_transfer.weight.data)
 		else:

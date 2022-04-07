@@ -9,7 +9,10 @@ from .models.transx.transh import TransH
 from .models.transx.transd import TransD
 
 models: dict[str, : Type[BMKGModel]] = {
-    'TransE': TransE,'TransR': TransR,'TransH': TransH,'TransD': TransD
+    'TransE': TransE,
+    'TransR': TransR,
+    'TransH': TransH,
+    'TransD': TransD
 }
 
 

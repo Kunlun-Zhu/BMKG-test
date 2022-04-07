@@ -18,8 +18,8 @@ class TransH(TransX):
 		self.norm_vector = nn.Embedding(self.rel_tot, self.dim)
 
 		if margin == None or epsilon == None:
-			nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
-			nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
+			nn.init.xavier_uniform_(self.ent_embed.weight.data)
+			nn.init.xavier_uniform_(self.rel_embed.weight.data)
 			nn.init.xavier_uniform_(self.norm_vector.weight.data)
 		else:
 			self.embedding_range = nn.Parameter(
