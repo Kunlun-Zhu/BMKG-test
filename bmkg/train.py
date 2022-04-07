@@ -5,8 +5,8 @@ from typing import Type
 from .models import BMKGModel
 from .models.transx.transe import TransE
 from .models.transx.transr import TransR
-from .models.transx.transH import TransH
-from .models.transx.transD import TransD
+from .models.transx.transh import TransH
+from .models.transx.transd import TransD
 
 models: dict[str, : Type[BMKGModel]] = {
     'TransE': TransE,
