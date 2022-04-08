@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import argparse
-from .semantic import BaseSemantic
+from base_semantic import BaseSemantic
 
 class DistMult(BaseSemantic):
 
