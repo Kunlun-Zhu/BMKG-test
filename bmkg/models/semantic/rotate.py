@@ -62,6 +62,7 @@ class RotatE(BaseSemantic):
 
 		re_relation = torch.cos(phase_relation)
 		im_relation = torch.sin(phase_relation)
+		print('p1,', re_relation:', re_relation.shape, 're_tail:', re_tail.shape, 'im_relation:', im_relation.shape, 'im_tail:', im_tail.shape)
 
 		re_head = re_head.view(-1, re_relation.shape[0], re_head.shape[-1]).permute(1, 0, 2)
 		re_tail = re_tail.view(-1, re_relation.shape[0], re_tail.shape[-1]).permute(1, 0, 2)
@@ -70,6 +71,7 @@ class RotatE(BaseSemantic):
 		im_relation = im_relation.view(-1, re_relation.shape[0], im_relation.shape[-1]).permute(1, 0, 2)
 		re_relation = re_relation.view(-1, re_relation.shape[0], re_relation.shape[-1]).permute(1, 0, 2)
 
+		print('p2,', re_relation:', re_relation.shape, 're_tail:', re_tail.shape, 'im_relation:', im_relation.shape, 'im_tail:', im_tail.shape)
 		if mode == "head_batch":
 			re_score = re_relation * re_tail + im_relation * im_tail
 			im_score = re_relation * im_tail - im_relation * re_tail
