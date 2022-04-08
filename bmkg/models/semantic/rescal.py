@@ -46,7 +46,7 @@ class RESCAL(BaseSemantic):
 		batch_r = r
 		h = self.ent_embed(batch_h)
 		t = self.ent_embed(batch_t)
-		r = self.rel_embed(batch_r)
+		r = self.rel_matrices(batch_r)
 		score = self._calc(h ,t, r)
 		return score
 
