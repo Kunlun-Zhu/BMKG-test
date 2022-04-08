@@ -82,8 +82,7 @@ class HolE(BaseSemantic):
 		#added
 		res = res.transpose(0, 1)
 		print(res.shape)
-		res = torch.view_as_real(res)
-		print(res.shape)
+		
 		print(self._real(res).flatten(start_dim = -1).shape)
 
 		return self._real(res).flatten(start_dim = -2)
