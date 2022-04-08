@@ -60,7 +60,7 @@ class HolE(BaseSemantic):
 		a = self._conj(torch.fft.rfft(a, dim = 1))
 		b = torch.fft.rfft(b, dim = 1)
 		res = self._mul(self._real(a), self._imag(a), self._real(b), self._imag(b))
-		res = torch.ifft(res, signal_ndim = 1)
+		res = torch.fft.ifft(res, dim = 1)
 		return self._real(res).flatten(start_dim = -2)
 
 	def _calc(self, h, t, r, mode):
