@@ -28,7 +28,10 @@ class RESCAL(BaseSemantic):
         """
 		t = t.view(-1, self.dim, 1)
 		r = r.view(-1, self.dim, self.dim)
+		print(t.shaped)
+		print(r.shaped)
 		tr = torch.matmul(r, t)
+		print(tr.shaped)
 		tr = tr.view(-1, self.dim)
 		return -torch.sum(h * tr, -1)
 
