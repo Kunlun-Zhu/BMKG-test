@@ -16,7 +16,7 @@ from ...data import DataLoader, TripleDataLoader, RandomCorruptSampler, RandomCh
 
 class BaseSemantic(BMKGModel, ABC):
     def __init__(self, config: argparse.Namespace):
-        super(TransX, self).__init__(config)
+        super(BaseSemantic, self).__init__(config)
         self.ent_embed = nn.Embedding(config.ent_size, config.dim, max_norm=1)
         self.rel_embed = nn.Embedding(config.rel_size, config.dim, max_norm=1)
         self.gamma = torch.Tensor([config.gamma]).cuda()
