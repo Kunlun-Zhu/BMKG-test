@@ -67,20 +67,20 @@ class HolE(BaseSemantic):
 		'''
 		a = self._conj(torch.view_as_real(torch.fft.fft(a, dim = 1)))
 		
-		print(a.size())
+		print(a.shape)
 		
 		b = torch.view_as_real(torch.fft.fft(b, dim = 1))
 		
-		print(b.size())
+		print(b.shape)
 		
 		res = self._mul(self._real(a), self._imag(a), self._real(b), self._imag(b))
 		
-		print(res.size())
+		print(res.shape)
 		
 		res = torch.fft.ifft(torch.view_as_complex(res), n=res.shape[1], dim=1)
 		
-		print(res.size())
-		print(self._real(res).flatten(start_dim = -2).siez())
+		print(res.shape)
+		print(self._real(res).flatten(start_dim = -2).shape)
 
 		return self._real(res).flatten(start_dim = -2)
 
