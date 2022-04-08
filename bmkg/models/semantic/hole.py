@@ -77,7 +77,7 @@ class HolE(BaseSemantic):
 		
 		print(res.shape)
 		
-		res = torch.fft.ifft(torch.view_as_complex(res), n=res.shape[1], dim=1)
+		res = torch.fft.ifft(res, n=res.shape[1], dim=1)
 		
 		#added
 		res = res.transpose(0, 1)
