@@ -21,7 +21,7 @@ models: dict[str, : Type[BMKGModel]] = {
     'TransH': TransH,
     'TransD': TransD,
     'Analogy': Analogy,
-    'Complex': ComplEx,
+    'ComplEx': ComplEx,
     'DistMult': DistMult,
     'HolE': HolE,
     'RESCAL': RESCAL,
