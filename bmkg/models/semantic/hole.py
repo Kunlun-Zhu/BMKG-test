@@ -66,9 +66,22 @@ class HolE(BaseSemantic):
 		return self._real(res).flatten(start_dim = -2)
 		'''
 		a = self._conj(torch.view_as_real(torch.fft.fft(a, dim = 1)))
+		
+		print(a.size())
+		
 		b = torch.view_as_real(torch.fft.fft(b, dim = 1))
+		
+		print(b.size())
+		
 		res = self._mul(self._real(a), self._imag(a), self._real(b), self._imag(b))
+		
+		print(res.size())
+		
 		res = torch.fft.ifft(torch.view_as_complex(res), n=res.shape[1], dim=1)
+		
+		print(res.size())
+		print(self._real(res).flatten(start_dim = -2).siez())
+
 		return self._real(res).flatten(start_dim = -2)
 
 	def _calc(self, h, t, r, mode):
@@ -81,16 +94,12 @@ class HolE(BaseSemantic):
         :param mode: char type, 'normal' or 'head_batch'
         :return: torch.Tensor() shaped (batch_size). The individual score for each
         """
-		'''
+		
 		if mode != 'normal':
 			h = h.view(-1, r.shape[0], h.shape[-1])
 			t = t.view(-1, r.shape[0], t.shape[-1])
 			r = r.view(-1, r.shape[0], r.shape[-1])
-		'''
-		###test
-		h = h.view(-1, r.shape[0], h.shape[-1])
-		t = t.view(-1, r.shape[0], t.shape[-1])
-		r = r.view(-1, r.shape[0], r.shape[-1])
+		
 
 		score = self._ccorr(h, t) * r
 		score = torch.sum(score, -1).flatten()
