@@ -9,11 +9,11 @@ from .models.transx.transh import TransH
 from .models.transx.transd import TransD
 from .models.semantic.analogy import Analogy
 from .models.semantic.complex import ComplEx
-from .models.semantic.distmult import Distmult
-from .models.semantic.hole import Hole
-from .models.semantic.rescal import Rescal
-from .models.semantic.rotate import Rotate
-from .models.semantic.simple import Simple
+from .models.semantic.distmult import DistMult
+from .models.semantic.hole import HolE
+from .models.semantic.rescal import RESCAL
+from .models.semantic.rotate import RotatE
+from .models.semantic.simple import SimplE
 
 models: dict[str, : Type[BMKGModel]] = {
     'TransE': TransE,
@@ -22,11 +22,11 @@ models: dict[str, : Type[BMKGModel]] = {
     'TransD': TransD,
     'Analogy': Analogy,
     'Complex': ComplEx,
-    'Distmult': Distmult,
-    'Hole': Hole,
-    'Rescal': Rescal,
-    'Rotate': Rotate,
-    'Simple': Simple
+    'DistMult': DistMult,
+    'HolE': HolE,
+    'RESCAL': RESCAL,
+    'RotatE': RotatE,
+    'SimplE': SimplE
 
 }
 
