@@ -8,7 +8,7 @@ from .models.transx.transr import TransR
 from .models.transx.transh import TransH
 from .models.transx.transd import TransD
 from .models.semantic.analogy import Analogy
-from .models.semantic.complex import Complex
+from .models.semantic.complex import ComplEx
 from .models.semantic.distmult import Distmult
 from .models.semantic.hole import Hole
 from .models.semantic.rescal import Rescal
@@ -21,7 +21,7 @@ models: dict[str, : Type[BMKGModel]] = {
     'TransH': TransH,
     'TransD': TransD,
     'Analogy': Analogy,
-    'Complex': Complex,
+    'Complex': ComplEx,
     'Distmult': Distmult,
     'Hole': Hole,
     'Rescal': Rescal,
