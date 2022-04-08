@@ -58,7 +58,7 @@ class HolE(BaseSemantic):
 
 	def _ccorr(self, a, b):
 		a = self._conj(torch.fft.rfft(a, dim = 1))
-		b = torch.fft.rfft(b, signal_ndim = 1, onesided = False)
+		b = torch.fft.rfft(b, dim = 1)
 		res = self._mul(self._real(a), self._imag(a), self._real(b), self._imag(b))
 		res = torch.ifft(res, signal_ndim = 1)
 		return self._real(res).flatten(start_dim = -2)
