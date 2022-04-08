@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import argparse
-from base_semantic import BaseSemantic
+from .base_semantic import BaseSemantic
 
 class ComplEx(BaseSemantic):
     def __init__(self, config: argparse.Namespace):

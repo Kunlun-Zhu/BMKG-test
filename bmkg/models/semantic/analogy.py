@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import argparse
-from base_semantic import BaseSemantic
+from .base_semantic import BaseSemantic
 
 class Analogy(BaseSemantic):
 

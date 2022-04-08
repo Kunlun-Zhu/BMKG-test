@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from base_semantic import BaseSemantic
+from .base_semantic import BaseSemantic
 import numpy
 import argparse
 from numpy import fft

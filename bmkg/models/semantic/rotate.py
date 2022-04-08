@@ -2,7 +2,7 @@ import torch
 import torch.autograd as autograd
 import torch.nn as nn
 import argparse
-from base_semantic import BaseSemantic
+from .base_semantic import BaseSemantic
 
 class RotatE(BaseSemantic):
 
