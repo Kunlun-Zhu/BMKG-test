@@ -81,10 +81,18 @@ class HolE(BaseSemantic):
         :param mode: char type, 'normal' or 'head_batch'
         :return: torch.Tensor() shaped (batch_size). The individual score for each
         """
+        
+        '''
 		if mode != 'normal':
 			h = h.view(-1, r.shape[0], h.shape[-1])
 			t = t.view(-1, r.shape[0], t.shape[-1])
 			r = r.view(-1, r.shape[0], r.shape[-1])
+		'''
+		###test
+		h = h.view(-1, r.shape[0], h.shape[-1])
+		t = t.view(-1, r.shape[0], t.shape[-1])
+		r = r.view(-1, r.shape[0], r.shape[-1])
+
 		score = self._ccorr(h, t) * r
 		score = torch.sum(score, -1).flatten()
 		return score
