@@ -9,6 +9,8 @@ class RESCAL(BaseSemantic):
 		super(RESCAL, self).__init__(config)
 
 		self.dim = config.dim
+
+		self.ent_embed = nn.Embedding(config.ent_size, config.dim)
 		self.rel_matrices = nn.Embedding(config.rel_size, self.dim * self.dim)
 		
 		nn.init.xavier_uniform_(self.ent_embed.weight.data)

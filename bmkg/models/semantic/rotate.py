@@ -97,7 +97,7 @@ class RotatE(BaseSemantic):
 		batch_h = h
 		batch_t = t
 		batch_r = r
-		mode = "head_batch"
+		mode = "normal"
 		h = self.ent_embed(batch_h)
 		t = self.ent_embed(batch_t)
 		r = self.rel_embed(batch_r)
