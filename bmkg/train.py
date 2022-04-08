@@ -7,12 +7,27 @@ from .models.transx.transe import TransE
 from .models.transx.transr import TransR
 from .models.transx.transh import TransH
 from .models.transx.transd import TransD
+from .models.semantic.analogy import Analogy
+from .models.semantic.complex import Complex
+from .models.semantic.distmult import Distmult
+from .models.semantic.hole import Hole
+from .models.semantic.rescal import Rescal
+from .models.semantic.rotate import Rotate
+from .models.semantic.simple import Simple
 
 models: dict[str, : Type[BMKGModel]] = {
     'TransE': TransE,
     'TransR': TransR,
     'TransH': TransH,
-    'TransD': TransD
+    'TransD': TransD,
+    'Analogy': Analogy,
+    'Complex': Complex,
+    'Distmult': Distmult,
+    'Hole': Hole,
+    'Rescal': Rescal,
+    'Rotate': Rotate,
+    'Simple': Simple
+
 }
 
 
