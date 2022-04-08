@@ -15,6 +15,9 @@ class RotatE(BaseSemantic):
 		self.dim_e = config.dim * 2
 		self.dim_r = config.dim
 
+		self.pi_const = nn.Parameter(torch.Tensor([3.14159265358979323846]))
+		self.pi_const.requires_grad = False
+
 		self.ent_embedding_range = nn.Parameter(
 			torch.Tensor([(self.margin + self.epsilon) / self.dim_e]), 
 			requires_grad=False
