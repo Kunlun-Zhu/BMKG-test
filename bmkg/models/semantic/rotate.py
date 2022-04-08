@@ -12,7 +12,12 @@ class RotatE(BaseSemantic):
 		self.margin = margin
 		self.epsilon = epsilon
 
-		self.dim_e = config.dim * 2
+		#origin
+		#self.dim_e = config.dim * 2
+		#test
+		self.dim_e = config.dim
+		###
+		
 		self.dim_r = config.dim
 
 		self.pi_const = nn.Parameter(torch.Tensor([3.14159265358979323846]))
