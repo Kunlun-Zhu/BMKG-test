@@ -53,8 +53,11 @@ def main():
     data_loader = loader_type(config)
     model: BMKGModel = model_type(config)
     model = model.cuda()
+    
     if not os.path.exists('saved_models'):
         os.makedirs('saved_models')
+    if not os.path.exists('saved_models/begin'):
+        os.makedirs('saved_models/begin')
 
     torch.save(model.state_dict, os.path.dirname().join('saved_models').join('begin') + conf.model + '.pt')
     model.do_train(data_loader)
