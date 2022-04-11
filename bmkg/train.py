@@ -51,10 +51,12 @@ def main():
     data_loader = loader_type(config)
     model: BMKGModel = model_type(config)
     model = model.cuda()
+    torch.save(self.state_dict, '/saved_models/begin')
     model.do_train(data_loader)
     if config.eval:
         model.do_valid(data_loader)
     print(config)
+    torch.save(self.state_dict, '/saved_models')
 
 
 if __name__ == '__main__':
