@@ -45,7 +45,7 @@ class TransX(BMKGModel, ABC):
         return loss
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
+        return torch.optim.SGD(self.parameters(), lr=self.lr)
 
     def forward(self, pos, neg) -> Tuple[torch.Tensor, torch.Tensor]:
         # TODO: Data
