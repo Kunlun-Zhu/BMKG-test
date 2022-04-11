@@ -56,6 +56,7 @@ def main():
 
     path = os.getcwd()
     if not os.path.exists(path + '\\saved_models'):
+        print(path + '\\saved_models')
         os.makedirs('saved_models')
     if not os.path.exists(path + '\\saved_models\\begin'):
         os.makedirs('saved_models/begin')
