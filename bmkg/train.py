@@ -60,12 +60,12 @@ def main():
     if not os.path.exists(path + 'saved_models/begin'):
         os.makedirs('saved_models/begin')
 
-    torch.save(model.state_dict, path.join('saved_models').join('begin') + conf.model + '.pt')
+    torch.save(model.state_dict, path.join('saved_models').join('begin') + '\\' + conf.model + '.pt')
     model.do_train(data_loader)
     if config.eval:
         model.do_valid(data_loader)
     print(config)
-    torch.save(model.state_dict, path.join('saved_models') + conf.model + '.pt')
+    torch.save(model.state_dict, path.join('saved_models') + '\\' + conf.model + '.pt')
 
 
 if __name__ == '__main__':
