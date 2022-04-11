@@ -57,10 +57,7 @@ def main():
     path = os.getcwd()
     if not os.path.exists(path + '/saved_models'):
         os.makedirs('saved_models')
-    if not os.path.exists(path + '/saved_models/begin'):
-        os.makedirs('saved_models/begin')
-
-    torch.save(model.state_dict, path + '/saved_models' + '/begin' + '/' + conf.model + '.pt')
+        
     model.do_train(data_loader)
     if config.eval:
         model.do_valid(data_loader)
