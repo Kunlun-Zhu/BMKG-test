@@ -15,7 +15,7 @@ class TripleDataset:
     TripleDataset yields TripleDataBatch from a specific range of a given .npy file.
     """
 
-    def __init__(self, filename: str, start: int = 0, end: int = -1, batch_size: int = 20, shuffle: bool = False):
+    def __init__(self, filename: str, start: int = 0, end: int = -1, batch_size: int = 20, shuffle: bool = False, loop: bool = True):
         super(TripleDataset).__init__()
         assert start >= 0
         self.data = np.load(filename)
@@ -26,6 +26,7 @@ class TripleDataset:
         self.end = end
         self.batch_size = batch_size
         self.shuffle = shuffle
+        self.loop = loop
 
     def __iter__(self) -> Generator[TripleDataBatch, Any, None]:
         iter_start = self.start
@@ -40,7 +41,8 @@ class TripleDataset:
                     batch = self.data[cur: cur + self.batch_size]
                     data = TripleDataBatch(batch[:, 0], batch[:, 1], batch[:, 2])
                     yield data
-
+                if not self.loop:
+                    break
         return iterator()
 
     def __len__(self):

@@ -35,8 +35,8 @@ class TripleDataLoader(DataLoader):
             self.train = TripleDataset(path / config.data_files[0], batch_size=config.train_batch_size)
         else:
             self.train = TripleDataset(path / config.data_files[0], batch_size=config.train_batch_size)
-            self.valid = TripleDataset(path / config.data_files[1], batch_size=config.test_batch_size)
-            self.test = TripleDataset(path / config.data_files[2], batch_size=config.test_batch_size)
+            self.valid = TripleDataset(path / config.data_files[1], batch_size=config.test_batch_size, loop=False)
+            self.test = TripleDataset(path / config.data_files[2], batch_size=config.test_batch_size, loop=False)
         with open(path / "config.json") as f:
             data_conf = json.load(f)
             config.ent_size = data_conf['ent_size']
