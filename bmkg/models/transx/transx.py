@@ -1,7 +1,7 @@
 import abc
 import argparse
 import logging
-from typing import Tuple, ClassVar, Type
+from typing import Tuple, ClassVar, Type, Union
 
 import torch.optim
 
