@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from torch import nn
 import torch.nn.functional as F
 
-from ...data import DataLoader, TripleDataLoader, RandomCorruptSampler, RandomChoiceSampler
+from ...data import TripleDataBatch, DataLoader, TripleDataLoader, RandomCorruptSampler, RandomChoiceSampler
 
 
 class TransX(BMKGModel, ABC):
