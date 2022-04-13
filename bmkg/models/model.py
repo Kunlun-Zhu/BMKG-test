@@ -123,20 +123,7 @@ class BMKGModel(abc.ABC, torch.nn.Module):
         torch.set_grad_enabled(True)
         optim = self.configure_optimizers()
         self.train_pbar = tqdm.tqdm(total=self.max_epoch * len(self.train_data))
-
-        #test_limit
-        limit = 0
-        ###test code
-
-
         for data in self.train_data:
-            
-            #test_code
-            limit += 1
-            if limit > 100:
-                break
-            ######## limit training process for debug
-
             self.step += 1
             loss = self.train_step(data)
             optim.zero_grad()
