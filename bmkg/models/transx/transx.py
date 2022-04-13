@@ -16,7 +16,6 @@ import torch.nn.functional as F
 from ...data import TripleDataBatch, DataLoader, TripleDataLoader, RandomCorruptSampler, RandomChoiceSampler
 
 
-
 class TransX(BMKGModel, ABC):
     def __init__(self, config: argparse.Namespace):
         super(TransX, self).__init__(config)
