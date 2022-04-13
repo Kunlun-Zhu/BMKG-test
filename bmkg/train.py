@@ -40,7 +40,9 @@ def main():
     # we first parse the model argument to determine which model to use
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, required=True, choices=models.keys(), help="which model to use.")
-    conf, model_args = parser.parse_known_args()
+    parser.add_argument('--not_train', dest="train", default=True, action="store_false", help="Not train")
+    parser.add_argument('--test', dest="test", default=False, action="store_true", help="Test the model")
+    conf, _ = parser.parse_known_args()
 
     # then we gather arguments for model and dataloader
     model_type = models[conf.model]
@@ -53,16 +55,10 @@ def main():
     data_loader = loader_type(config)
     model: BMKGModel = model_type(config)
     model = model.cuda()
-
-    path = os.getcwd()
-    if not os.path.exists(path + '/saved_models'):
-        os.makedirs('saved_models')
-        
     model.do_train(data_loader)
-    if config.eval:
-        model.do_valid(data_loader)
-    print(config)
-    torch.save(model.state_dict, path + '/saved_models' + '/' + conf.model + '.pt')
+    if conf.test:
+        model.do_test(data_loader)
+    
 
 
 if __name__ == '__main__':
