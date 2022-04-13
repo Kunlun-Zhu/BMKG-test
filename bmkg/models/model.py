@@ -12,25 +12,28 @@ from ..data import DataLoader
 
 
 class BMKGModel(abc.ABC, torch.nn.Module):
-
     step = 0
     epoch = 0
     data_loader: DataLoader
     train_data: Iterable
     valid_data: Iterable
     test_data: Iterable
-    pbar: tqdm.tqdm
+    valid_pbar: tqdm.tqdm
+    train_pbar: tqdm.tqdm
+    test_pbar: tqdm.tqdm
 
     def __init__(self, config: argparse.Namespace):
         super().__init__()
         self.config = config
         self.lr = self.config.lr
         self.max_epoch = config.max_epoch
-        wandb.init(
-            project="BMKG",
-            tags=[config.model],
-            config=config
-        )
+        self.logger = config.logger
+        if self.logger == 'wandb':
+            wandb.init(
+                project="BMKG",
+                tags=[config.model],
+                config=config
+            )
         # TODO: INITIALIZE LOGGER
 
     @abstractmethod
@@ -65,38 +68,111 @@ class BMKGModel(abc.ABC, torch.nn.Module):
         """
         pass
 
+    def on_valid_start(self) -> None:
+        """
+        on_valid_start hook will be called before validation starts.
+
+        by default, we do nothing.
+        :return:
+        """
+        pass
+
+    def on_valid_end(self) -> None:
+        """
+        on_valid_end hook will be called after validation ends.
+
+        by default, we do nothing.
+        :return:
+        """
+        pass
+
+
+    def on_test_start(self) -> None:
+        """
+        on_test_start hook will be called before test starts.
+
+        by default, we do nothing.
+        :return:
+        """
+        pass
+
+    def on_test_end(self) -> None:
+        """
+        on_test_end hook will be called after test ends.
+
+        by default, we do nothing.
+        :return:
+        """
+        pass
+
+    def on_epoch_end(self) -> None:
+        """
+        on_epoch_end hook will be called after each epoch.
+
+        by default, we do nothing.
+        :return:
+        """
+        pass
+
+
     def do_train(self, data_loader: DataLoader):
         self.train_data = data_loader.train
         self.on_train_start()
         self.train()
         torch.set_grad_enabled(True)
         optim = self.configure_optimizers()
-        self.pbar = tqdm.tqdm(total=self.max_epoch * len(self.train_data))
-        for i in range(self.max_epoch):
-            for data in self.train_data:
-                self.step += 1
-                loss = self.train_step(data)
-                optim.zero_grad()
-                loss.backward()
-                optim.step()
-                self.pbar.update(1)
+        self.train_pbar = tqdm.tqdm(total=self.max_epoch * len(self.train_data))
+        for data in self.train_data:
+            self.step += 1
+            loss = self.train_step(data)
+            optim.zero_grad()
+            loss.backward()
+            optim.step()
+            self.train_pbar.update(1)
+            if self.step % len(self.train_data) == 0:
+                # TODO: SAVE MODEL
+                self.on_epoch_end()
+                self.step = 0
+                self.epoch += 1
+                if self.epoch % self.config.valid_interval == 0:
+                    self.train_pbar.write("Validating")
+                    self.do_valid(data_loader)
+            if self.epoch == self.max_epoch:
+                break
 
-    def do_valid(self):
-        raise NotImplementedError
-        # TODO:
-        # Call load_data
-        # etc.
+    def do_valid(self, data_loader: DataLoader):
+        self.valid_data = data_loader.valid
+        self.on_valid_start()
+        self.eval()
+        torch.set_grad_enabled(False)
+        self.valid_pbar = tqdm.tqdm(total=len(self.valid_data))
+        for data in self.valid_data:
+            self.step += 1
+            self.valid_step(data)
+            self.valid_pbar.update(1)
+        self.on_valid_end()
+        self.train()
+        torch.set_grad_enabled(True)
 
-    def do_test(self):
-        raise NotImplementedError
-        # TODO:
-        # Call load_data
-        # etc.
+    def do_test(self, data_loader: DataLoader):
+        self.test_data = data_loader.test
+        self.on_test_start()
+        self.eval()
+        torch.set_grad_enabled(False)
+        self.test_pbar = tqdm.tqdm(total=len(self.test_data))
+        for data in self.test_data:
+            self.step += 1
+            self.test_step(data)
+            self.test_pbar.update(1)
+        self.on_test_end()
+        self.train()
+        torch.set_grad_enabled(True)
 
     def log(self, key: str, value: Union[int, float, torch.TensorType]):
-        wandb.log({
-            key: value
-        }, step = self.step)
+        if self.logger == 'wandb':
+            wandb.log({
+                key: value
+            })
         # raise NotImplementedError
 
     def log_hyperparameters(self):
@@ -107,5 +183,6 @@ class BMKGModel(abc.ABC, torch.nn.Module):
         parser = argparse.ArgumentParser(parents=[parser], add_help=False)
         parser.add_argument('--lr', type=float, default=0.5, help="Learning rate")
         parser.add_argument('--max_epoch', type=int, default=1, help="How many epochs to run")
-        parser.add_argument('--logger', choices=['wandb','none'], default='wandb', help="Which logger to use")
+        parser.add_argument('--logger', choices=['wandb', 'none'], default='wandb', help="Which logger to use")
+        parser.add_argument('--valid_interval', default=1, type=int, help="How many epochs to run before validating")
         return parser
