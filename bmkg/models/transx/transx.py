@@ -1,8 +1,10 @@
 import abc
 import argparse
 import logging
+from tkinter import E
 from typing import Tuple, ClassVar, Type, Union
 
+import numpy
 import torch.optim
 
 import bmkg.data
@@ -12,6 +14,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from ...data import TripleDataBatch, DataLoader, TripleDataLoader, RandomCorruptSampler, RandomChoiceSampler
+
 
 
 class TransX(BMKGModel, ABC):
