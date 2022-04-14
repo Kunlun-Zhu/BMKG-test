@@ -134,7 +134,7 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
             self.step += 1
             loss = self.train_step(data)
 
-            if self.fused = True:
+            if self.fused == True:
                 loss = optim.loss_scale(loss) #only when using fused optimizer
             
             optim.zero_grad()
