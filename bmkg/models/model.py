@@ -32,8 +32,7 @@ class BMKGModel(abc.ABC, torch.nn.Module):
             wandb.init(
                 project="BMKG",
                 tags=[config.model],
-                config=config,
-                entity="leo_test_team"
+                config=config
             )
         # TODO: INITIALIZE LOGGER
 
