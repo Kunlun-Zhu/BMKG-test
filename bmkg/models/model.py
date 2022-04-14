@@ -3,15 +3,14 @@ import argparse
 import logging
 from abc import abstractmethod
 from typing import Union, Type, Iterable
-
 import torch
 import tqdm
 import wandb
-
 from ..data import DataLoader
+import bmtrain as bmt
 
 
-class BMKGModel(abc.ABC, torch.nn.Module):
+class BMKGModel(abc.ABC, bmt.DistributedModule):
     step = 0
     epoch = 0
     data_loader: DataLoader
@@ -28,12 +27,14 @@ class BMKGModel(abc.ABC, torch.nn.Module):
         self.lr = self.config.lr
         self.max_epoch = config.max_epoch
         self.logger = config.logger
+
+        self.fused = False
+
         if self.logger == 'wandb':
             wandb.init(
                 project="BMKG",
                 tags=[config.model],
-                config=config,
-                entity="leo_test_team"
+                config=config
             )
         # TODO: INITIALIZE LOGGER
 
@@ -121,14 +122,30 @@ class BMKGModel(abc.ABC, torch.nn.Module):
         self.on_train_start()
         self.train()
         torch.set_grad_enabled(True)
-        optim = self.configure_optimizers()
+        #optim = self.configure_optimizers()
+        optim = bmt.optim.AdamOffloadOptimizer(self.parameters(), weight_decay=1e-2, scale=2**20)
+        lr_scheduler = bmt.lr_scheduler.Noam(optim, start_lr=1e-3, warmup_iter=40, end_iter=1000, num_iter=0)
+        bmt.synchronize()
+        avg_time_recorder = bmt.utils.AverageRecorder()
+        avg_loss_recorder = bmt.utils.AverageRecorder()
+
         self.train_pbar = tqdm.tqdm(total=self.max_epoch * len(self.train_data))
         for data in self.train_data:
             self.step += 1
             loss = self.train_step(data)
+
+            if self.fused = True:
+                loss = optim.loss_scale(loss) #only when using fused optimizer
+            
             optim.zero_grad()
+            
             loss.backward()
-            optim.step()
+            #optim.step()
+
+            bmt.optim_step(optim, lr_scheduler)
+
+            #bmt.wait_optimizer() # when using loader stream wait for optimizer
+
             self.train_pbar.update(1)
             if self.step % len(self.train_data) == 0:
                 # TODO: SAVE MODEL
@@ -140,6 +157,7 @@ class BMKGModel(abc.ABC, torch.nn.Module):
                     self.do_valid(data_loader)
             if self.epoch == self.max_epoch:
                 break
+
 
     def do_valid(self, data_loader: DataLoader):
         self.valid_data = data_loader.valid

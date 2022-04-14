@@ -1,39 +1,21 @@
 import argparse
 import logging
 from typing import Type
-import os.path
-import torch
-
 from .models import BMKGModel
 from .models.transx.transe import TransE
-from .models.transx.transr import TransR
-from .models.transx.transh import TransH
-from .models.transx.transd import TransD
-from .models.semantic.analogy import Analogy
-from .models.semantic.complex import ComplEx
-from .models.semantic.distmult import DistMult
-from .models.semantic.hole import HolE
-from .models.semantic.rescal import RESCAL
-from .models.semantic.rotate import RotatE
-from .models.semantic.simple import SimplE
+import bmtrain as bmt
 
 models: dict[str, : Type[BMKGModel]] = {
-    'TransE': TransE,
-    'TransR': TransR,
-    'TransH': TransH,
-    'TransD': TransD,
-    'Analogy': Analogy,
-    'ComplEx': ComplEx,
-    'DistMult': DistMult,
-    'HolE': HolE,
-    'RESCAL': RESCAL,
-    'RotatE': RotatE,
-    'SimplE': SimplE
-
+    'TransE': TransE
 }
 
 
 def main():
+
+    bmt.init_distributed(
+        seed=0,
+    )
+
     FORMAT = '%(levelname)s %(asctime)-15s %(filename)s:%(lineno)d %(message)s'
     logging.basicConfig(format=FORMAT)
     logging.getLogger().setLevel(logging.INFO)
@@ -55,10 +37,18 @@ def main():
     data_loader = loader_type(config)
     model: BMKGModel = model_type(config)
     model = model.cuda()
+    #init model parameters using bmt.init_parameters
+    bmt.init_parameters(model)
+    bmt.print_rank("Model memory")
+    bmt.print_rank(torch.cuda.memory_summary())
+    bmt.synchronize()
+
     model.do_train(data_loader)
     if conf.test:
         model.do_test(data_loader)
-    
+
+    #bmt save models       
+    bmt.save(model, "checkpoint_" + conf.model  + ".pt")
 
 
 if __name__ == '__main__':

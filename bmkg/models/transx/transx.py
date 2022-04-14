@@ -12,7 +12,7 @@ from ..model import BMKGModel
 from abc import ABC, abstractmethod
 from torch import nn
 import torch.nn.functional as F
-
+import bmtrain as bmt
 from ...data import TripleDataBatch, DataLoader, TripleDataLoader, RandomCorruptSampler, RandomChoiceSampler
 
 
