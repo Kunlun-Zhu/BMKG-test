@@ -12,9 +12,7 @@ models: dict[str, : Type[BMKGModel]] = {
 
 def main():
 
-    bmt.init_distributed(
-        seed=0
-    )
+    bmt.init_distributed(seed=0)
 
     FORMAT = '%(levelname)s %(asctime)-15s %(filename)s:%(lineno)d %(message)s'
     logging.basicConfig(format=FORMAT)
