@@ -135,9 +135,13 @@ class BMKGModel(abc.ABC, torch.nn.Module):
                 self.on_epoch_end()
                 self.step = 0
                 self.epoch += 1
+                
+                '''
                 if self.epoch % self.config.valid_interval == 0:
                     self.train_pbar.write("Validating")
                     self.do_valid(data_loader)
+                
+                '''
             if self.epoch == self.max_epoch:
                 break
 
