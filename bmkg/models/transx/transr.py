@@ -65,6 +65,8 @@ class TransR(TransX):
 		r_transfer = r_transfer.view(-1, self.dim_e, self.dim_r)
 		
 		e = e.view(-1, 1, self.dim_e)
+		print(r_transfer.shape)
+		print(e.shape)
 		e = torch.matmul(e, r_transfer)
 		
 		return e.view(-1, self.dim_r)
