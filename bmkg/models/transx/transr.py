@@ -60,13 +60,21 @@ class TransR(TransX):
 		score = torch.norm(score, self.p_norm, -1).flatten()
 		return score
 	
-	def _transfer(self, e, r_transfer):
+	def _transfer_h(self, e, r_transfer):
+		r_transfer = r_transfer.view(-1, self.dim_e, self.dim_r)
+		
+		e = e.view(-1, 1, self.dim_e)
+		e = torch.matmul(e, r_transfer)
+		
+		return e.view(-1, self.dim_r)
+
+	def _transfer_t(self, e, r_transfer):
 		r_transfer = r_transfer.view(-1, self.dim_e, self.dim_r)
 		if e.shape[0] != r_transfer.shape[0]:
 			#e = e.view(-1, r_transfer.shape[0], self.dim_e).permute(1, 0, 2)
-			e = e.view(1, config.ent_size, self.dim_e).permute(1, 0, 2)
-			
+			e = e.view(config.ent_size, 1, self.dim_e).permute(1, 0, 2)
 			e = torch.matmul(e, r_transfer).permute(1, 0, 2)
+		
 		else:
 			e = e.view(-1, 1, self.dim_e)
 			e = torch.matmul(e, r_transfer)
@@ -90,8 +98,8 @@ class TransR(TransX):
 		t = self.ent_embed(batch_t)
 		r = self.rel_embed(batch_r)
 		r_transfer = self.transfer_matrix(batch_r)
-		h = self._transfer(h, r_transfer)
-		t = self._transfer(t, r_transfer)
+		h = self._transfer_h(h, r_transfer)
+		t = self._transfer_t(t, r_transfer)
 		score = self._calc(h ,t, r, mode)
 		if self.margin_flag:
 			return self.margin - score
