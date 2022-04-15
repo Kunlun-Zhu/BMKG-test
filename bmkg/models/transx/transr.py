@@ -73,6 +73,7 @@ class TransR(TransX):
 		return e.view(-1, self.dim_r)
 
 	def _transfer_t(self, e, r_transfer):
+		'''
 		r_transfer = r_transfer.view(-1, self.dim_e, self.dim_r)
 		if e.shape[0] != r_transfer.shape[0]:
 			#e = e.view(-1, r_transfer.shape[0], self.dim_e).permute(1, 0, 2)
@@ -85,7 +86,17 @@ class TransR(TransX):
 			e = e.view(-1, 1, self.dim_e)
 			e = torch.matmul(e, r_transfer)
 		return e.view(-1, self.dim_r)
-
+		'''
+		r_transfer = r_transfer.view(-1, self.dim_e, self.dim_r)
+		
+		#e = e.view(-1, 1, self.dim_e)
+		e = e.view(1, -1, self.dim_e)
+		print(r_transfer.shape)
+		print(e.shape)
+		e = torch.matmul(e, r_transfer)
+		
+		return e.view(-1, self.dim_r)
+		
 	#scoring function added
 	def scoring_function(self, h, r, t):
 		"""
