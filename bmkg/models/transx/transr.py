@@ -18,8 +18,7 @@ class TransR(TransX):
 		nn.init.xavier_uniform_(self.ent_embed.weight.data)
 		nn.init.xavier_uniform_(self.rel_embed.weight.data)
 
-		#self.transfer_matrix = nn.Embedding(config.rel_size, self.dim_e * self.dim_r)
-		self.transfer_matrix = nn.Embedding(config.rel_size, self.dim_e * self.dim_r * config.ent_size)
+		self.transfer_matrix = nn.Embedding(config.rel_size, self.dim_e * self.dim_r)
 		if not self.rand_init:
 			identity = torch.zeros(self.dim_e, self.dim_r)
 			for i in range(min(self.dim_e, self.dim_r)):
