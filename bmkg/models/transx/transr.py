@@ -14,6 +14,7 @@ class TransR(TransX):
 		self.norm_flag = norm_flag
 		self.p_norm = p_norm
 		self.rand_init = rand_init
+		self.ent_size = config.ent_size
 
 		nn.init.xavier_uniform_(self.ent_embed.weight.data)
 		nn.init.xavier_uniform_(self.rel_embed.weight.data)
@@ -72,7 +73,7 @@ class TransR(TransX):
 		r_transfer = r_transfer.view(-1, self.dim_e, self.dim_r)
 		if e.shape[0] != r_transfer.shape[0]:
 			#e = e.view(-1, r_transfer.shape[0], self.dim_e).permute(1, 0, 2)
-			e = e.view(config.ent_size, 1, self.dim_e).permute(1, 0, 2)
+			e = e.view(self.ent_size, 1, self.dim_e).permute(1, 0, 2)
 			e = torch.matmul(e, r_transfer).permute(1, 0, 2)
 		
 		else:
