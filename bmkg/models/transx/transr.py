@@ -18,7 +18,9 @@ class TransR(TransX):
 		nn.init.xavier_uniform_(self.ent_embed.weight.data)
 		nn.init.xavier_uniform_(self.rel_embed.weight.data)
 
-		self.transfer_matrix = nn.Embedding(config.rel_size, self.dim_e * self.dim_r)
+		#self.transfer_matrix = nn.Embedding(config.rel_size, self.dim_e * self.dim_r)
+		self.transfer_matrix = nn.Embedding(config.rel_size, self.dim_e * self.dim_r * config.ent_size)
+		
 		if not self.rand_init:
 			identity = torch.zeros(self.dim_e, self.dim_r)
 			for i in range(min(self.dim_e, self.dim_r)):
@@ -62,18 +64,12 @@ class TransR(TransX):
 	
 	def _transfer(self, e, r_transfer):
 		r_transfer = r_transfer.view(-1, self.dim_e, self.dim_r)
-		'''
 		if e.shape[0] != r_transfer.shape[0]:
 			e = e.view(-1, r_transfer.shape[0], self.dim_e).permute(1, 0, 2)
 			e = torch.matmul(e, r_transfer).permute(1, 0, 2)
 		else:
 			e = e.view(-1, 1, self.dim_e)
 			e = torch.matmul(e, r_transfer)
-		'''
-		e = e.view(-1, 1, self.dim_e)
-		e = torch.matmul(e, r_transfer)
-		
-
 		return e.view(-1, self.dim_r)
 
 	#scoring function added
