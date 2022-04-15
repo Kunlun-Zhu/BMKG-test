@@ -60,6 +60,20 @@ class TransR(TransX):
 			score = (h + r) - t
 		score = torch.norm(score, self.p_norm, -1).flatten()
 		return score
+<<<<<<< HEAD
+=======
+	
+	def _transfer_h(self, e, r_transfer):
+		r_transfer = r_transfer.view(-1, self.dim_e, self.dim_r)
+		
+		#e = e.view(-1, 1, self.dim_e)
+		e = e.view(1, -1, self.dim_e)
+		print(r_transfer.shape)
+		print(e.shape)
+		e = torch.matmul(e, r_transfer)
+		
+		return e.view(-1, self.dim_r)
+>>>>>>> parent of 4b027e9 (Update transr.py)
 
 <<<<<<< HEAD
 	def _transfer(self, e, r_transfer):
