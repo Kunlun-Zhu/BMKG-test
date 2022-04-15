@@ -12,3 +12,9 @@ class TransE(TransX):
         score = self.ent_embed(heads) + self.rel_embed(rels) - self.ent_embed(tails)
         score = torch.norm(score, p=self.p_norm, dim=-1)
         return score
+
+    def soreing_function_2(self, h, r, t, *_):
+    	#score function for valid & test remain the same in TransE
+    	score = self.ent_embed(heads) + self.rel_embed(rels) - self.ent_embed(tails)
+        score = torch.norm(score, p=self.p_norm, dim=-1)
+        return score

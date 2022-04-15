@@ -71,18 +71,18 @@ class TransX(BMKGModel, ABC):
 
     def valid_step(self, batch):
         pos = batch
-        pos_score: torch.Tensor = self.forward(pos)
+        pos_score: torch.Tensor = self.forward(pos, valid_test = True)
         # corrupt head
         neg_data = TripleDataBatch(
             numpy.arange(0, self.config.ent_size, dtype=numpy.int32).reshape((1, -1)), pos.r.reshape(-1, 1), pos.t.reshape(-1, 1))
-        neg_score: torch.Tensor = self.forward(neg_data)
+        neg_score: torch.Tensor = self.forward(neg_data, valid_test = True)
         # todo: remove positive edge when counting.
         rank = torch.sum(neg_score <= pos_score.reshape(-1, 1), dim=1)
         self.ranks.append(rank)
         # corrupt tail
         neg_data = TripleDataBatch(
             pos.h.reshape(-1, 1), pos.r.reshape(-1, 1), numpy.arange(0, self.config.ent_size, dtype=numpy.int32).reshape((1, -1)))
-        neg_score: torch.Tensor = self.forward(neg_data)
+        neg_score: torch.Tensor = self.forward(neg_data, valid_test = True)
         # todo: remove positive edge when counting.
         rank = torch.sum(neg_score <= pos_score.reshape(-1, 1), dim=1)
         self.ranks.append(rank)
@@ -101,18 +101,18 @@ class TransX(BMKGModel, ABC):
 
     def test_step(self, batch):
         pos = batch
-        pos_score: torch.Tensor = self.forward(pos)
+        pos_score: torch.Tensor = self.forward(pos, valid_test = True)
         # corrupt head
         neg_data = TripleDataBatch(
             numpy.arange(0, self.config.ent_size, dtype=numpy.int32).reshape((1, -1)), pos.r.reshape(-1, 1), pos.t.reshape(-1, 1))
-        neg_score: torch.Tensor = self.forward(neg_data)
+        neg_score: torch.Tensor = self.forward(neg_data, valid_test = True)
         # todo: remove positive edge when counting.
         rank = torch.sum(neg_score <= pos_score.reshape(-1, 1), dim=1)
         self.ranks.append(rank)
         # corrupt tail
         neg_data = TripleDataBatch(
             pos.h.reshape(-1, 1), pos.r.reshape(-1, 1), numpy.arange(0, self.config.ent_size, dtype=numpy.int32).reshape((1, -1)))
-        neg_score: torch.Tensor = self.forward(neg_data)
+        neg_score: torch.Tensor = self.forward(neg_data, valid_test = True)
         # todo: remove positive edge when counting.
         rank = torch.sum(neg_score <= pos_score.reshape(-1, 1), dim=1)
         self.ranks.append(rank)
@@ -120,7 +120,7 @@ class TransX(BMKGModel, ABC):
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.SGD(self.parameters(), lr=self.lr)
 
-    def forward(self, pos, neg=None) -> Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
+    def forward(self, pos, neg=None, valid_test = False) -> Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
         # TODO: Data
         if neg is not None:
             posh = torch.LongTensor(pos.h).cuda()
@@ -129,14 +129,21 @@ class TransX(BMKGModel, ABC):
             negh = torch.LongTensor(neg.h).cuda()
             negr = torch.LongTensor(neg.r).cuda()
             negt = torch.LongTensor(neg.t).cuda()
-            pos_score = self.scoring_function(posh, posr, post)
-            neg_score = self.scoring_function(negh, negr, negt)
+            if valid_test:
+                pos_score = self.scoring_function_2(posh, posr, post)
+                neg_score = self.scoring_function_2(negh, negr, negt)
+            else:
+                pos_score = self.scoring_function(posh, posr, post)
+                neg_score = self.scoring_function(negh, negr, negt)
             return pos_score, neg_score
         else:
             posh = torch.LongTensor(pos.h).cuda()
             posr = torch.LongTensor(pos.r).cuda()
             post = torch.LongTensor(pos.t).cuda()
-            pos_score = self.scoring_function(posh, posr, post)
+            if valid_test:
+                pos_score = self.scoring_function_2(posh, posr, post)
+            else:
+                pos_score = self.scoring_function(posh, posr, post)
             return pos_score
 
     def on_epoch_end(self):

@@ -62,20 +62,44 @@ class TransR(TransX):
 		return score
 
 	def _transfer(self, e, r_transfer):
-		r_transfer = r_transfer.view(-1, 1, self.dim_e, self.dim_r)
-		'''
+		r_transfer = r_transfer.view(-1, self.dim_e, self.dim_r)
 		if e.shape[0] != r_transfer.shape[0]:
 			e = e.view(-1, r_transfer.shape[0], self.dim_e).permute(1, 0, 2)
 			e = torch.matmul(e, r_transfer).permute(1, 0, 2)
 		else:
 			e = e.view(-1, 1, self.dim_e)
 			e = torch.matmul(e, r_transfer)
-		'''
-		e = e.view(1, -1, 1, 128)
-		e = torch.matmul(e, r_transfer)
-		
 		return e.view(-1, self.dim_r)
+	
+	def _calc_2(self, h, t, r, mode):
+		"""
+		score calculation for valid & test
+        _calc defines the main methods to calculate the score
+
+        :param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
+        :param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
+        :param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
+        :return: torch.Tensor() shaped (batch_size). The individual score for each
+        """
 		
+		score = (h + r) - t
+		
+		score = torch.norm(score, self.p_norm, -1).flatten()
+		return score
+
+	
+	def _transfer_2(self, e, r_transfer):
+		#transfer method for valid&test
+		r_transfer = r_transfer.view(-1, 1, self.dim_e, self.dim_r)
+
+		e.view(1, -1, 1, self.dim_e)
+
+		torch.matmul(e, r_transfer)
+
+		e.squeeze(dim=2)
+
+		return e.view(-1, self.dim_r)
+
 	#scoring function added
 	def scoring_function(self, h, r, t):
 		"""
@@ -102,5 +126,30 @@ class TransR(TransX):
 		else:
 			return score
 
+	def soreing_function_2(self, h, r, t):
+
+		"""
+		score function for valid_step & test step
+        :param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
+        :param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
+        :param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
+        :return: torch.Tensor() shaped (batch_size). The individual score for each
+
+        """
+        batch_h = h
+		batch_t = t
+		batch_r = r
+		mode = 'normal'
+		h = self.ent_embed(batch_h)
+		t = self.ent_embed(batch_t)
+		r = self.rel_embed(batch_r)
+		r_transfer = self.transfer_matrix(batch_r)
+		h = self._transfer_2(h, r_transfer)
+		t = self._transfer_2(t, r_transfer)
+		score = self._calc_2(h ,t, r, mode)
+		if self.margin_flag:
+			return self.margin - score
+		else:
+			return score
 
 
