@@ -60,47 +60,18 @@ class TransR(TransX):
 			score = (h + r) - t
 		score = torch.norm(score, self.p_norm, -1).flatten()
 		return score
-<<<<<<< HEAD
-=======
-	
-	def _transfer_h(self, e, r_transfer):
-		r_transfer = r_transfer.view(-1, self.dim_e, self.dim_r)
-		
-		#e = e.view(-1, 1, self.dim_e)
-		e = e.view(1, -1, self.dim_e)
-		print(r_transfer.shape)
-		print(e.shape)
-		e = torch.matmul(e, r_transfer)
-		
-		return e.view(-1, self.dim_r)
->>>>>>> parent of 4b027e9 (Update transr.py)
 
-<<<<<<< HEAD
 	def _transfer(self, e, r_transfer):
-=======
-	def _transfer_t(self, e, r_transfer):
+		r_transfer = r_transfer.view(-1, 1, self.dim_e, self.dim_r)
 		'''
->>>>>>> parent of c109a61 (Update transr.py)
-		r_transfer = r_transfer.view(-1, self.dim_e, self.dim_r)
 		if e.shape[0] != r_transfer.shape[0]:
 			e = e.view(-1, r_transfer.shape[0], self.dim_e).permute(1, 0, 2)
-			print(r_transfer.shape)
-			print(e.shape)
 			e = torch.matmul(e, r_transfer).permute(1, 0, 2)
-		
 		else:
 			e = e.view(-1, 1, self.dim_e)
-			print(r_transfer.shape)
-			print(e.shape)
 			e = torch.matmul(e, r_transfer)
-		return e.view(-1, self.dim_r)
 		'''
-		r_transfer = r_transfer.view(-1, self.dim_e, self.dim_r)
-		
-		#e = e.view(-1, 1, self.dim_e)
-		e = e.view(1, -1, self.dim_e)
-		print(r_transfer.shape)
-		print(e.shape)
+		e = e.view(1, -1, 1, 128)
 		e = torch.matmul(e, r_transfer)
 		
 		return e.view(-1, self.dim_r)
