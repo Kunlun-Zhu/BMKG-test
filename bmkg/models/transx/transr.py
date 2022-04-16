@@ -92,13 +92,13 @@ class TransR(TransX):
 		#transfer method for valid&test
 		r_transfer = r_transfer.view(-1, 1, self.dim_e, self.dim_r)
 
-		e.view(1, -1, 1, self.dim_e)
+		e = e.view(1, -1, 1, self.dim_e)
 
 		e = torch.matmul(e, r_transfer)
 		
 		print (e.shape)
 
-		e.squeeze(dim=2)
+		e = e.squeeze(dim=2)
 
 		print (e.shape)
 
