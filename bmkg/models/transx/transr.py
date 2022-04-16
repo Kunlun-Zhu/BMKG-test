@@ -98,7 +98,7 @@ class TransR(TransX):
 
 		e.squeeze(dim=2)
 
-		return e.view(-1, self.dim_r)
+		return e
 
 	#scoring function added
 	def scoring_function(self, h, r, t):
