@@ -94,9 +94,13 @@ class TransR(TransX):
 
 		e.view(1, -1, 1, self.dim_e)
 
-		torch.matmul(e, r_transfer)
+		e = torch.matmul(e, r_transfer)
+		
+		print (e.shape)
 
 		e.squeeze(dim=2)
+
+		print (e.shape)
 
 		return e
 
