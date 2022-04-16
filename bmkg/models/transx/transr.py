@@ -39,13 +39,13 @@ class TransR(TransX):
 
 	def _calc(self, h, t, r, mode):
 		"""
-        _calc defines the main methods to calculate the score
+		_calc defines the main methods to calculate the score
 
-        :param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
-        :param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
-        :param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
-        :return: torch.Tensor() shaped (batch_size). The individual score for each
-        """
+		:param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
+		:param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
+		:param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
+		:return: torch.Tensor() shaped (batch_size). The individual score for each
+		"""
 		if self.norm_flag:
 			h = F.normalize(h, 2, -1)
 			r = F.normalize(r, 2, -1)
@@ -74,13 +74,13 @@ class TransR(TransX):
 	def _calc_2(self, h, t, r, mode):
 		"""
 		score calculation for valid & test
-        _calc defines the main methods to calculate the score
+		_calc defines the main methods to calculate the score
 
-        :param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
-        :param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
-        :param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
-        :return: torch.Tensor() shaped (batch_size). The individual score for each
-        """
+		:param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
+		:param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
+		:param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
+		:return: torch.Tensor() shaped (batch_size). The individual score for each
+		"""
 		
 		score = (h + r) - t
 		
@@ -104,12 +104,12 @@ class TransR(TransX):
 	def scoring_function(self, h, r, t):
 		"""
 
-        :param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
-        :param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
-        :param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
-        :return: torch.Tensor() shaped (batch_size). The individual score for each
+		:param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
+		:param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
+		:param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
+		:return: torch.Tensor() shaped (batch_size). The individual score for each
 
-        """
+		"""
 		batch_h = h
 		batch_t = t
 		batch_r = r
@@ -130,13 +130,13 @@ class TransR(TransX):
 
 		"""
 		score function for valid_step & test step
-        :param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
-        :param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
-        :param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
-        :return: torch.Tensor() shaped (batch_size). The individual score for each
+		:param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
+		:param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
+		:param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
+		:return: torch.Tensor() shaped (batch_size). The individual score for each
 
-        """
-        batch_h = h
+		"""
+		batch_h = h
 		batch_t = t
 		batch_r = r
 		mode = 'normal'
