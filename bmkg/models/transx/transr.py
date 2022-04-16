@@ -6,18 +6,17 @@ from .transx import TransX
 
 class TransR(TransX):
 
-	def __init__(self,config: argparse.Namespace, p_norm = 1, norm_flag = True, rand_init = False, margin = None):
+	def __init__(self,config: argparse.Namespace, norm_flag = True, rand_init = False, margin = None):
 		super(TransR, self).__init__(config)
 		
 		self.dim_e = config.dim
 		self.dim_r = config.dim
 		self.norm_flag = norm_flag
-		self.p_norm = p_norm
 		self.rand_init = rand_init
 		self.ent_size = config.ent_size
 
-		nn.init.xavier_uniform_(self.ent_embed.weight.data)
-		nn.init.xavier_uniform_(self.rel_embed.weight.data)
+		#nn.init.xavier_uniform_(self.ent_embed.weight.data)
+		#nn.init.xavier_uniform_(self.rel_embed.weight.data)
 
 		self.transfer_matrix = nn.Embedding(config.rel_size, self.dim_e * self.dim_r)
 		if not self.rand_init:
@@ -30,7 +29,7 @@ class TransR(TransX):
 		else:
 			nn.init.xavier_uniform_(self.transfer_matrix.weight.data)
 
-		if margin != None:
+		if margin is not None:
 			self.margin = nn.Parameter(torch.Tensor([margin]))
 			self.margin.requires_grad = False
 			self.margin_flag = True
@@ -91,45 +90,28 @@ class TransR(TransX):
 	def _transfer_t(self, e, r_transfer):
 		#transfer method for valid&test
 		r_transfer = r_transfer.view(-1, 1, self.dim_e, self.dim_r)
-		print ('r', r_transfer.shape)
-		print ('p1', e.shape)
 		if e.shape[0] == 1:
 			#shape is:(1, 15k, dim_e)
 			e = e.view(1, -1, 1, self.dim_e)
 		else:
 			#shape is: (batch_size, dim_e)
 			e = e.view(-1, 1, 1, self.dim_e)
-
-		print ('p2', e.shape)
-
 		e = torch.matmul(e, r_transfer)
-		
-		print ('p3', e.shape)
-
 		e = e.squeeze(dim=2)
-
-		print ('p4', e.shape)
 
 		return e
 
 	def _transfer_h(self, e, r_transfer):
 		#transfer method for valid&test
 		r_transfer = r_transfer.view(-1, 1, self.dim_e, self.dim_r)
-		print ('r', r_transfer.shape)
-		print ('p1h', e.shape)
 		if e.shape[0] == 1:
 			#shape is:(1, 15k, dim_e)
 			e = e.view(1, -1, 1, self.dim_e)
 		else:
 			#shape is: (batch_size, dim_e)
 			e = e.view(-1, 1, 1, self.dim_e)
-		print (e.shape)
-		print ('p2h', e.shape)
 		e = torch.matmul(e, r_transfer)
-		print ('p3h', e.shape)
-		print (e.shape)
 		e = e.squeeze(dim=2)
-		print ('p4h', e.shape)
 
 		return e
 
