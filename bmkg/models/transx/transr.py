@@ -93,7 +93,7 @@ class TransR(TransX):
 		r_transfer = r_transfer.view(-1, 1, self.dim_e, self.dim_r)
 		print ('r', r_transfer.shape)
 		print ('p1', e.shape)
-		e = e.view(-1, 1, 1, self.dim_e)
+		e = e.view(1, -1, 1, self.dim_e)
 
 		print ('p2', e.shape)
 
@@ -112,7 +112,7 @@ class TransR(TransX):
 		r_transfer = r_transfer.view(-1, 1, self.dim_e, self.dim_r)
 		print ('r', r_transfer.shape)
 		print ('p1h', e.shape)
-		e = e.view(-1, 1, 1, self.dim_e)
+		e = e.view(1, -1, 1, self.dim_e)
 		print (e.shape)
 		print ('p2h', e.shape)
 		e = torch.matmul(e, r_transfer)
