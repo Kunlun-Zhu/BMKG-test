@@ -205,4 +205,40 @@ class TransR(TransX):
 		score = h + r - t
 		score = torch.norm(score, p=self.p_norm, dim=-1)
 		return score
+	def scoring_function_2(self, heads, rels, tails, *_):
+		"""
+		:param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
+		:param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
+		:param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
+		:return: torch.Tensor() shaped (batch_size). The individual score for each
+		"""
+		# (20, 1, 128) or (20, 128)
+		h: torch.Tensor = self.ent_embed(heads)
+		# (20, 1, 128) or (20, 128)
+		r: torch.Tensor = self.rel_embed(rels)
+		# (1, 1500, 128) or (20, 128)
+		t: torch.Tensor = self.ent_embed(tails)
+		# (20, 1, 128 * 128) or (20, 128 * 128)
+		prj: torch.Tensor = self.transfer_matrix(rels)
+		# (20, 1, 128, 128) or (20, 128, 128)
+		prj = prj.view(*prj.size()[:-1], self.dim_e, self.dim_r)
 
+		# (20, 1, 1, 128) or (20, 1, 128)
+		h = torch.unsqueeze(h, -2)
+		# (1, 1500, 1, 128) or (20, 1, 128)
+		t = torch.unsqueeze(t, -2)
+
+		# (20, 1, 1, 128) or (20, 1, 128)
+		h = torch.matmul(h, prj)
+		# (1, 1500, 1, 128) or (20, 1, 128)
+		t = torch.matmul(t, prj)
+
+		# (20, 1, 128) or (20, 128)
+		h = torch.squeeze(h, -2)
+		# (1, 1500, 128) or (20, 128)
+		t = torch.squeeze(t, -2)
+
+		# (20, 1500, 128) or (20, 128)
+		score = h + r - t
+		score = torch.norm(score, p=self.p_norm, dim=-1)
+		return score
