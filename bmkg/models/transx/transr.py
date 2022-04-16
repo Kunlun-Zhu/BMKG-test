@@ -88,11 +88,30 @@ class TransR(TransX):
 		return score
 
 	
-	def _transfer_2(self, e, r_transfer):
+	def _transfer_t(self, e, r_transfer):
+		#transfer method for valid&test
+		r_transfer = r_transfer.view(-1, 1, self.dim_e, self.dim_r)
+		print ('p1', e.shape)
+		e = e.view(1, -1, 1, self.dim_e)
+
+		print ('p2', e.shape)
+
+		e = torch.matmul(e, r_transfer)
+		
+		print ('p3', e.shape)
+
+		e = e.squeeze(dim=2)
+
+		print ('p4', e.shape)
+
+		return e
+
+	def _transfer_h(self, e, r_transfer):
 		#transfer method for valid&test
 		r_transfer = r_transfer.view(-1, 1, self.dim_e, self.dim_r)
 
-		e = e.view(1, -1, 1, self.dim_e)
+		e = e.view(-1, 1, 1, self.dim_e)
+		print (e.shape)
 
 		e = torch.matmul(e, r_transfer)
 		
@@ -103,6 +122,7 @@ class TransR(TransX):
 		print (e.shape)
 
 		return e
+
 
 	#scoring function added
 	def scoring_function(self, h, r, t):
@@ -148,8 +168,8 @@ class TransR(TransX):
 		t = self.ent_embed(batch_t)
 		r = self.rel_embed(batch_r)
 		r_transfer = self.transfer_matrix(batch_r)
-		h = self._transfer_2(h, r_transfer)
-		t = self._transfer_2(t, r_transfer)
+		h = self._transfer_h(h, r_transfer)
+		t = self._transfer_t(t, r_transfer)
 		score = self._calc_2(h ,t, r, mode)
 		if self.margin_flag:
 			return self.margin - score
