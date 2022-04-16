@@ -126,7 +126,7 @@ class TransR(TransX):
 		else:
 			return score
 
-	def soreing_function_2(self, h, r, t):
+	def scoring_function_2(self, h, r, t):
 
 		"""
 		score function for valid_step & test step
