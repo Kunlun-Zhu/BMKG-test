@@ -14,14 +14,14 @@ from torch import nn
 import torch.nn.functional as F
 import bmtrain as bmt
 from ...data import TripleDataBatch, DataLoader, TripleDataLoader, RandomCorruptSampler, RandomChoiceSampler
-
+from .bmtlayers import Embedding
 
 class TransX(BMKGModel, ABC):
     def __init__(self, config: argparse.Namespace):
         super(TransX, self).__init__(config)
         self.ranks: list[torch.LongTensor] = []
-        self.ent_embed = nn.Embedding(config.ent_size, config.dim, max_norm=1)
-        self.rel_embed = nn.Embedding(config.rel_size, config.dim, max_norm=1)
+        self.ent_embed = Embedding(config.ent_size, config.dim, max_norm=1)
+        self.rel_embed = Embedding(config.rel_size, config.dim, max_norm=1)
         nn.init.xavier_uniform_(self.ent_embed.weight.data)
         nn.init.xavier_uniform_(self.rel_embed.weight.data)
         self.gamma = torch.Tensor([config.gamma]).cuda()
