@@ -14,7 +14,7 @@ from torch import nn
 import torch.nn.functional as F
 import bmtrain as bmt
 from ...data import TripleDataBatch, DataLoader, TripleDataLoader, RandomCorruptSampler, RandomChoiceSampler
-from .bmtlayers import Embedding
+from ..bmtlayers import Embedding
 
 class TransX(BMKGModel, ABC):
     def __init__(self, config: argparse.Namespace):
