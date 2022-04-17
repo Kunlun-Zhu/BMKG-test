@@ -19,9 +19,9 @@ def main():
     logging.getLogger().setLevel(logging.INFO)
     # we first parse the model argument to determine which model to use
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='TransE', required=True, choices=models.keys(), help="which model to use.")
+    parser.add_argument('--model', type=str, required=True, choices=models.keys(), help="which model to use.")
     parser.add_argument('--not_train', dest="train", default=True, action="store_false", help="Not train")
-    parser.add_argument('--test', dest="test", default=True, action="store_true", help="Test the model")
+    parser.add_argument('--test', dest="test", default=False, action="store_true", help="Test the model")
     conf, _ = parser.parse_known_args()
 
     # then we gather arguments for model and dataloader
