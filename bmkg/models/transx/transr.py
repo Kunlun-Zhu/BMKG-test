@@ -15,9 +15,6 @@ class TransR(TransX):
 		self.rand_init = rand_init
 		self.ent_size = config.ent_size
 
-		#nn.init.xavier_uniform_(self.ent_embed.weight.data)
-		#nn.init.xavier_uniform_(self.rel_embed.weight.data)
-
 		self.transfer_matrix = nn.Embedding(config.rel_size, self.dim_e * self.dim_r)
 		if not self.rand_init:
 			identity = torch.zeros(self.dim_e, self.dim_r)
@@ -35,139 +32,7 @@ class TransR(TransX):
 			self.margin_flag = True
 		else:
 			self.margin_flag = False
-	'''
-	def _calc(self, h, t, r, mode):
-		"""
-		_calc defines the main methods to calculate the score
 
-		:param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
-		:param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
-		:param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
-		:return: torch.Tensor() shaped (batch_size). The individual score for each
-		"""
-		if self.norm_flag:
-			h = F.normalize(h, 2, -1)
-			r = F.normalize(r, 2, -1)
-			t = F.normalize(t, 2, -1)
-		if mode != 'normal':
-			h = h.view(-1, r.shape[0], h.shape[-1])
-			t = t.view(-1, r.shape[0], t.shape[-1])
-			r = r.view(-1, r.shape[0], r.shape[-1])
-		if mode == 'head_batch':
-			score = h + (r - t)
-		else:
-			score = (h + r) - t
-		score = torch.norm(score, self.p_norm, -1).flatten()
-		return score
-
-	def _transfer(self, e, r_transfer):
-		r_transfer = r_transfer.view(-1, self.dim_e, self.dim_r)
-		if e.shape[0] != r_transfer.shape[0]:
-			e = e.view(-1, r_transfer.shape[0], self.dim_e).permute(1, 0, 2)
-			e = torch.matmul(e, r_transfer).permute(1, 0, 2)
-		else:
-			e = e.view(-1, 1, self.dim_e)
-			e = torch.matmul(e, r_transfer)
-		return e.view(-1, self.dim_r)
-	
-	def _calc_2(self, h, t, r, mode):
-		"""
-		score calculation for valid & test
-		_calc defines the main methods to calculate the score
-
-		:param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
-		:param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
-		:param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
-		:return: torch.Tensor() shaped (batch_size). The individual score for each
-		"""
-		
-		score = (h + r) - t
-		
-		score = torch.norm(score, self.p_norm, -1).flatten()
-		return score
-
-	
-	def _transfer_t(self, e, r_transfer):
-		#transfer method for valid&test
-		r_transfer = r_transfer.view(-1, 1, self.dim_e, self.dim_r)
-		if e.shape[0] == 1:
-			#shape is:(1, 15k, dim_e)
-			e = e.view(1, -1, 1, self.dim_e)
-		else:
-			#shape is: (batch_size, dim_e)
-			e = e.view(-1, 1, 1, self.dim_e)
-		e = torch.matmul(e, r_transfer)
-		e = e.squeeze(dim=2)
-
-		return e
-
-	def _transfer_h(self, e, r_transfer):
-		#transfer method for valid&test
-		r_transfer = r_transfer.view(-1, 1, self.dim_e, self.dim_r)
-		if e.shape[0] == 1:
-			#shape is:(1, 15k, dim_e)
-			e = e.view(1, -1, 1, self.dim_e)
-		else:
-			#shape is: (batch_size, dim_e)
-			e = e.view(-1, 1, 1, self.dim_e)
-		e = torch.matmul(e, r_transfer)
-		e = e.squeeze(dim=2)
-
-		return e
-
-
-	#scoring function added
-	def scoring_function(self, h, r, t):
-		"""
-
-		:param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
-		:param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
-		:param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
-		:return: torch.Tensor() shaped (batch_size). The individual score for each
-
-		"""
-		batch_h = h
-		batch_t = t
-		batch_r = r
-		mode = 'normal'
-		h = self.ent_embed(batch_h)
-		t = self.ent_embed(batch_t)
-		r = self.rel_embed(batch_r)
-		r_transfer = self.transfer_matrix(batch_r)
-		h = self._transfer(h, r_transfer)
-		t = self._transfer(t, r_transfer)
-		score = self._calc(h ,t, r, mode)
-		if self.margin_flag:
-			return self.margin - score
-		else:
-			return score
-
-	def scoring_function_2(self, h, r, t):
-
-		"""
-		score function for valid_step & test step
-		:param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
-		:param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
-		:param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
-		:return: torch.Tensor() shaped (batch_size). The individual score for each
-
-		"""
-		batch_h = h
-		batch_t = t
-		batch_r = r
-		mode = 'normal'
-		h = self.ent_embed(batch_h)
-		t = self.ent_embed(batch_t)
-		r = self.rel_embed(batch_r)
-		r_transfer = self.transfer_matrix(batch_r)
-		h = self._transfer_h(h, r_transfer)
-		t = self._transfer_t(t, r_transfer)
-		score = self._calc_2(h ,t, r, mode)
-		if self.margin_flag:
-			return self.margin - score
-		else:
-			return score
-	'''
 	def scoring_function(self, heads, rels, tails, *_):
 		"""
 		:param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
@@ -175,70 +40,23 @@ class TransR(TransX):
 		:param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
 		:return: torch.Tensor() shaped (batch_size). The individual score for each
 		"""
-		# (20, 1, 128) or (20, 128)
+
 		h: torch.Tensor = self.ent_embed(heads)
-		# (20, 1, 128) or (20, 128)
 		r: torch.Tensor = self.rel_embed(rels)
-		# (1, 1500, 128) or (20, 128)
 		t: torch.Tensor = self.ent_embed(tails)
-		# (20, 1, 128 * 128) or (20, 128 * 128)
 		prj: torch.Tensor = self.transfer_matrix(rels)
-		# (20, 1, 128, 128) or (20, 128, 128)
 		prj = prj.view(*prj.size()[:-1], self.dim_e, self.dim_r)
 
-		# (20, 1, 1, 128) or (20, 1, 128)
 		h = torch.unsqueeze(h, -2)
-		# (1, 1500, 1, 128) or (20, 1, 128)
 		t = torch.unsqueeze(t, -2)
 
-		# (20, 1, 1, 128) or (20, 1, 128)
 		h = torch.matmul(h, prj)
-		# (1, 1500, 1, 128) or (20, 1, 128)
 		t = torch.matmul(t, prj)
 
-		# (20, 1, 128) or (20, 128)
+
 		h = torch.squeeze(h, -2)
-		# (1, 1500, 128) or (20, 128)
 		t = torch.squeeze(t, -2)
 
-		# (20, 1500, 128) or (20, 128)
-		score = h + r - t
-		score = torch.norm(score, p=self.p_norm, dim=-1)
-		return score
-	def scoring_function_2(self, heads, rels, tails, *_):
-		"""
-		:param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
-		:param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
-		:param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
-		:return: torch.Tensor() shaped (batch_size). The individual score for each
-		"""
-		# (20, 1, 128) or (20, 128)
-		h: torch.Tensor = self.ent_embed(heads)
-		# (20, 1, 128) or (20, 128)
-		r: torch.Tensor = self.rel_embed(rels)
-		# (1, 1500, 128) or (20, 128)
-		t: torch.Tensor = self.ent_embed(tails)
-		# (20, 1, 128 * 128) or (20, 128 * 128)
-		prj: torch.Tensor = self.transfer_matrix(rels)
-		# (20, 1, 128, 128) or (20, 128, 128)
-		prj = prj.view(*prj.size()[:-1], self.dim_e, self.dim_r)
-
-		# (20, 1, 1, 128) or (20, 1, 128)
-		h = torch.unsqueeze(h, -2)
-		# (1, 1500, 1, 128) or (20, 1, 128)
-		t = torch.unsqueeze(t, -2)
-
-		# (20, 1, 1, 128) or (20, 1, 128)
-		h = torch.matmul(h, prj)
-		# (1, 1500, 1, 128) or (20, 1, 128)
-		t = torch.matmul(t, prj)
-
-		# (20, 1, 128) or (20, 128)
-		h = torch.squeeze(h, -2)
-		# (1, 1500, 128) or (20, 128)
-		t = torch.squeeze(t, -2)
-
-		# (20, 1500, 128) or (20, 128)
 		score = h + r - t
 		score = torch.norm(score, p=self.p_norm, dim=-1)
 		return score
