@@ -9,8 +9,8 @@ def main():
     logging.basicConfig(format=FORMAT)
     logging.getLogger().setLevel(logging.INFO)
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_path', type=str, required=True)
-    parser.add_argument('--data_files', type=str, required=True, nargs='+')
+    parser.add_argument('--data_path', type=str, default='/home/wanghuadong/zhukunlun/BMKG-test/data/FB15k',required=False)
+    parser.add_argument('--data_files', type=str, default='train.npy valid.npy test.npy train.py',required=False, nargs='+')
     parser.add_argument('--data_format', choices=['hrt', 'htr', 'rht', 'rth', 'thr', 'trh'], default='hrt')
     parser.add_argument('--union_vocab', action='store_true', default=False, help="Whether to use same embedding "
                                                                                   "space for entities and relations.")
