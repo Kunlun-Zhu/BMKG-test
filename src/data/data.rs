@@ -1,4 +1,4 @@
-use numpy::{PyArrayDyn};
+use numpy::PyArrayDyn;
 use pyo3::{create_exception, exceptions::PyException, prelude::*};
 
 /// TripleDataBatch is a batch of triple data <h,r,t>, stored in 3 numpy arrays.
@@ -6,11 +6,11 @@ use pyo3::{create_exception, exceptions::PyException, prelude::*};
 #[pyo3(text_signature = "(h, r, t, /)")]
 pub struct TripleDataBatch {
     #[pyo3(get, set)]
-    h: Py<PyArrayDyn<i32>>,
+    pub(crate) h: Py<PyArrayDyn<i32>>,
     #[pyo3(get, set)]
-    r: Py<PyArrayDyn<i32>>,
+    pub(crate) r: Py<PyArrayDyn<i32>>,
     #[pyo3(get, set)]
-    t: Py<PyArrayDyn<i32>>,
+    pub(crate) t: Py<PyArrayDyn<i32>>,
 }
 
 create_exception!(bmkg, DataError, PyException);
@@ -18,7 +18,12 @@ create_exception!(bmkg, DataError, PyException);
 #[pymethods]
 impl TripleDataBatch {
     #[new]
-    fn new(py: Python, h: &PyArrayDyn<i32>, r: &PyArrayDyn<i32>, t: &PyArrayDyn<i32>) -> PyResult<Self> {
+    fn new(
+        py: Python,
+        h: &PyArrayDyn<i32>,
+        r: &PyArrayDyn<i32>,
+        t: &PyArrayDyn<i32>,
+    ) -> PyResult<Self> {
         let numpy = PyModule::import(py, "numpy")?;
         if numpy.getattr("broadcast")?.call1((h, r, t)).is_err() {
             return Err(DataError::new_err(format!(

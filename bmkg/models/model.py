@@ -8,13 +8,13 @@ import torch
 import tqdm
 import wandb
 
-from ..data import DataLoader
+from ..data import DataModule
 
 
 class BMKGModel(abc.ABC, torch.nn.Module):
     step = 0
     epoch = 0
-    data_loader: DataLoader
+    data_loader: DataModule
     train_data: Iterable
     valid_data: Iterable
     test_data: Iterable
@@ -32,8 +32,8 @@ class BMKGModel(abc.ABC, torch.nn.Module):
             wandb.init(
                 project="BMKG",
                 tags=[config.model],
-                config=config,
-                entity="leo_test_team"
+                entity="leo_test_team",
+                config=config
             )
         # TODO: INITIALIZE LOGGER
 
@@ -57,7 +57,7 @@ class BMKGModel(abc.ABC, torch.nn.Module):
 
     @staticmethod
     @abstractmethod
-    def load_data() -> Type[DataLoader]:
+    def load_data() -> Type[DataModule]:
         pass
 
     def on_train_start(self) -> None:
@@ -116,38 +116,35 @@ class BMKGModel(abc.ABC, torch.nn.Module):
         pass
 
 
-    def do_train(self, data_loader: DataLoader):
+    def do_train(self, data_loader: DataModule):
         self.train_data = data_loader.train
         self.on_train_start()
         self.train()
         torch.set_grad_enabled(True)
         optim = self.configure_optimizers()
         self.train_pbar = tqdm.tqdm(total=self.max_epoch * len(self.train_data))
-        for data in self.train_data:
-            self.step += 1
-            loss = self.train_step(data)
-            optim.zero_grad()
-            loss.backward()
-            optim.step()
-            self.train_pbar.update(1)
-            if self.step % len(self.train_data) == 0:
-                # TODO: SAVE MODEL
-                self.on_epoch_end()
-                self.step = 0
-                self.epoch += 1
+        for _ in range(self.max_epoch):
+            self.on_epoch_start()
+            for data in self.train_data:
+                self.step += 1
+                loss = self.train_step(data)
+                optim.zero_grad()
+                loss.backward()
+                optim.step()
+                self.train_pbar.update(1)
+            # TODO: SAVE MODEL
+            self.on_epoch_end()
+            self.step = 0
+            self.epoch += 1
+            if self.epoch % self.config.valid_interval == 0:
+                self.train_pbar.write("Validating")
+                self.do_valid(data_loader)
 
-                if self.epoch % self.config.valid_interval == 0:
-                    self.train_pbar.write("Validating")
-                    self.do_valid(data_loader)
-
-            if self.epoch == self.max_epoch:
-                break
-
-    def do_valid(self, data_loader: DataLoader):
+    @torch.no_grad()
+    def do_valid(self, data_loader: DataModule):
         self.valid_data = data_loader.valid
         self.on_valid_start()
         self.eval()
-        torch.set_grad_enabled(False)
         self.valid_pbar = tqdm.tqdm(total=len(self.valid_data))
         for data in self.valid_data:
             self.step += 1
@@ -155,9 +152,8 @@ class BMKGModel(abc.ABC, torch.nn.Module):
             self.valid_pbar.update(1)
         self.on_valid_end()
         self.train()
-        torch.set_grad_enabled(True)
 
-    def do_test(self, data_loader: DataLoader):
+    def do_test(self, data_loader: DataModule):
         self.test_data = data_loader.test
         self.on_test_start()
         self.eval()

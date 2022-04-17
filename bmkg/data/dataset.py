@@ -4,11 +4,12 @@ from typing import Any, Generator
 
 import numpy as np
 import random
+import torch
 
 from .._data import TripleDataBatch
 
 
-class TripleDataset:
+class TripleDataset(torch.utils.data.IterableDataset):
     """
     Dataset is responsible for reading given data file and yield DataBatch.
 
@@ -29,20 +30,24 @@ class TripleDataset:
         self.loop = loop
 
     def __iter__(self) -> Generator[TripleDataBatch, Any, None]:
-        iter_start = self.start
-        iter_end = self.end
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info is None:
+            iter_start = self.start
+            iter_end = self.end
+        else:
+            per_worker = int(math.ceil((self.end - self.start) / float(worker_info.num_workers)))
+            worker_id = worker_info.id
+            iter_start = self.start + worker_id * per_worker
+            iter_end = min(iter_start + per_worker, self.end)
 
         def iterator():
             starts = list(range(iter_start, iter_end, self.batch_size))
             if self.shuffle:
                 random.shuffle(starts)
-            while True:
-                for cur in starts:
-                    batch = self.data[cur: cur + self.batch_size]
-                    data = TripleDataBatch(batch[:, 0], batch[:, 1], batch[:, 2])
-                    yield data
-                if not self.loop:
-                    break
+            for cur in starts:
+                batch = self.data[cur: cur + self.batch_size]
+                data = TripleDataBatch(batch[:, 0], batch[:, 1], batch[:, 2])
+                yield data
         return iterator()
 
     def __len__(self):
