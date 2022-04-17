@@ -2,7 +2,7 @@ import abc
 import argparse
 import logging
 from tkinter import E
-from typing import Tuple, ClassVar, Type, Union
+from typing import Tuple, ClassVar, Type, Union, Optional
 
 import numpy
 import torch.optim
@@ -13,7 +13,9 @@ from abc import ABC, abstractmethod
 from torch import nn
 import torch.nn.functional as F
 
-from ...data import TripleDataBatch, DataLoader, TripleDataLoader, RandomCorruptSampler, RandomChoiceSampler
+from ...data import TripleDataBatch, TripleDataBatchGPU, DataModule
+from IPython import embed
+
 
 
 class TransX(BMKGModel, ABC):
@@ -26,21 +28,30 @@ class TransX(BMKGModel, ABC):
         nn.init.xavier_uniform_(self.rel_embed.weight.data)
         self.gamma = torch.Tensor([config.gamma]).cuda()
         self.p_norm = config.p_norm
+        with torch.no_grad():
+            self.rel_embed.weight /= torch.norm(self.rel_embed.weight, p=self.p_norm, dim=-1)[:, None]
 
     @abstractmethod
     def scoring_function(self, heads, rels, tails, *args):
         """
         scoring_function defines a scoring function for a TransX-like model.
 
-        :param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
+        :param heads: torch.Tensor() shaped (batch_size) or (batch_size, neg_sample_size), containing the id for the head entity.
         :param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
-        :param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
+        :param tails: torch.Tensor() shaped (batch_size) or (batch_size, neg_sample_size), containing the id for the tail entity.
         :param args: Additional arguments given by dataset.
-        :return: torch.Tensor() shaped (batch_size). The individual score for each
+        
+        When training, both heads and tails are (batch_size).
+        When testing, one of heads and tails are (batch_size, neg_sample_size).
+        You should use boardcasting operation to calculate score.
+        
+        :return: torch.Tensor() shaped (batch_size) or (batch_sizem neg_sample_size), depending on whether training or testing.
+        The individual score for each
         """
 
     def train_step(self, batch):
         pos, neg = self.forward(*batch)
+        neg: torch.Tensor = neg.mean(-1)
         # TODO: regularization
         if self.config.loss_method == 'dgl':
             # dgl-ke style loss
@@ -71,23 +82,24 @@ class TransX(BMKGModel, ABC):
 
     def valid_step(self, batch):
         pos = batch
-        pos_score: torch.Tensor = self.forward(pos, valid_test = True)
+        pos_score: torch.Tensor = self.forward(pos)
         # corrupt head
-        neg_data = TripleDataBatch(
-            numpy.arange(0, self.config.ent_size, dtype=numpy.int32).reshape((1, -1)), pos.r.reshape(-1, 1), pos.t.reshape(-1, 1))
-        neg_score: torch.Tensor = self.forward(neg_data, valid_test = True)
+        neg_data = TripleDataBatchGPU(
+            torch.arange(0, self.config.ent_size, dtype=torch.int32, device=pos.h.device).view((1, -1)), pos.r.view(-1, 1),
+            pos.t.view(-1, 1))
+        neg_score: torch.Tensor = self.forward(neg_data)
         # todo: remove positive edge when counting.
-        rank = torch.sum(neg_score <= pos_score.reshape(-1, 1), dim=1)
+        rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1)
         self.ranks.append(rank)
         # corrupt tail
-        neg_data = TripleDataBatch(
-            pos.h.reshape(-1, 1), pos.r.reshape(-1, 1), numpy.arange(0, self.config.ent_size, dtype=numpy.int32).reshape((1, -1)))
-        neg_score: torch.Tensor = self.forward(neg_data, valid_test = True)
+        neg_data = TripleDataBatchGPU(
+            pos.h.view(-1, 1), pos.r.view(-1, 1),
+            torch.arange(0, self.config.ent_size, dtype=torch.int32, device=pos.h.device).view((1, -1)))
+        neg_score: torch.Tensor = self.forward(neg_data)
         # todo: remove positive edge when counting.
-        rank = torch.sum(neg_score <= pos_score.reshape(-1, 1), dim=1)
+        rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1)
         self.ranks.append(rank)
-        
-        
+
     def on_test_start(self) -> None:
         self.ranks = []
 
@@ -101,66 +113,48 @@ class TransX(BMKGModel, ABC):
 
     def test_step(self, batch):
         pos = batch
-        pos_score: torch.Tensor = self.forward(pos, valid_test = True)
+        pos_score: torch.Tensor = self.forward(pos)
         # corrupt head
-        neg_data = TripleDataBatch(
-            numpy.arange(0, self.config.ent_size, dtype=numpy.int32).reshape((1, -1)), pos.r.reshape(-1, 1), pos.t.reshape(-1, 1))
-        neg_score: torch.Tensor = self.forward(neg_data, valid_test = True)
+        neg_data = TripleDataBatchGPU(
+            torch.arange(0, self.config.ent_size, dtype=torch.int32, device=pos.h.device).view((1, -1)), pos.r.view(-1, 1),
+            pos.t.view(-1, 1))
+        neg_score: torch.Tensor = self.forward(neg_data)
         # todo: remove positive edge when counting.
-        rank = torch.sum(neg_score <= pos_score.reshape(-1, 1), dim=1)
+        rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1)
         self.ranks.append(rank)
         # corrupt tail
-        neg_data = TripleDataBatch(
-            pos.h.reshape(-1, 1), pos.r.reshape(-1, 1), numpy.arange(0, self.config.ent_size, dtype=numpy.int32).reshape((1, -1)))
-        neg_score: torch.Tensor = self.forward(neg_data, valid_test = True)
+        neg_data = TripleDataBatchGPU(
+            pos.h.view(-1, 1), pos.r.view(-1, 1),
+            torch.arange(0, self.config.ent_size, dtype=torch.int32, device=pos.h.device).view((1, -1)))
+        neg_score: torch.Tensor = self.forward(neg_data)
         # todo: remove positive edge when counting.
-        rank = torch.sum(neg_score <= pos_score.reshape(-1, 1), dim=1)
+        rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1)
         self.ranks.append(rank)
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
-        return torch.optim.SGD(self.parameters(), lr=self.lr)
+        if self.config.optim == "SGD":
+            return torch.optim.SGD(self.parameters(), lr=self.lr)
+        elif self.config.optim == "Adam":
+            return torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=0)
 
-    def forward(self, pos, neg=None, valid_test = False) -> Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
+    def forward(self, pos: TripleDataBatchGPU, neg: Optional[TripleDataBatchGPU] = None) -> Union[
+        Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
         # TODO: Data
         if neg is not None:
-            posh = torch.LongTensor(pos.h).cuda()
-            posr = torch.LongTensor(pos.r).cuda()
-            post = torch.LongTensor(pos.t).cuda()
-            negh = torch.LongTensor(neg.h).cuda()
-            negr = torch.LongTensor(neg.r).cuda()
-            negt = torch.LongTensor(neg.t).cuda()
-            if valid_test:
-                pos_score = self.scoring_function_2(posh, posr, post)
-                neg_score = self.scoring_function_2(negh, negr, negt)
-            else:
-                pos_score = self.scoring_function(posh, posr, post)
-                neg_score = self.scoring_function(negh, negr, negt)
+            pos_score = self.scoring_function(pos.h, pos.r, pos.t)
+            neg_score = self.scoring_function(neg.h, neg.r, neg.t)
             return pos_score, neg_score
         else:
-            posh = torch.LongTensor(pos.h).cuda()
-            posr = torch.LongTensor(pos.r).cuda()
-            post = torch.LongTensor(pos.t).cuda()
-            if valid_test:
-                pos_score = self.scoring_function_2(posh, posr, post)
-            else:
-                pos_score = self.scoring_function(posh, posr, post)
+            pos_score = self.scoring_function(pos.h, pos.r, pos.t)
             return pos_score
 
-    def on_epoch_end(self):
-        torch.set_grad_enabled(False)
-        self.ent_embed.weight /= torch.norm(self.ent_embed.weight, p=self.p_norm, dim=-1)[:, None]
-        self.rel_embed.weight /= torch.norm(self.rel_embed.weight, p=self.p_norm, dim=-1)[:, None]
-        torch.set_grad_enabled(True)
-
-    def on_train_start(self):
-        head_sampler = RandomCorruptSampler(self.train_data, self.config.ent_size, mode='head')
-        tail_sampler = RandomCorruptSampler(self.train_data, self.config.ent_size, mode='tail')
-        combined = RandomChoiceSampler([head_sampler, tail_sampler])
-        self.train_data = combined
+    def on_epoch_start(self):
+        with torch.no_grad():
+            self.ent_embed.weight /= torch.norm(self.ent_embed.weight, p=self.p_norm, dim=-1)[:, None]
 
     @staticmethod
-    def load_data() -> Type[DataLoader]:
-        return bmkg.data.TripleDataLoader
+    def load_data() -> Type[DataModule]:
+        return bmkg.data.TripleDataModule
 
     @classmethod
     def add_args(cls, parser: argparse.ArgumentParser):
@@ -169,7 +163,8 @@ class TransX(BMKGModel, ABC):
         parser.add_argument("--dim", type=int, default=128, help="The embedding dimension for relations and entities")
         parser.add_argument("--gamma", type=float, default=15.0, help="The gamma for max-margin loss")
         parser.add_argument("--p_norm", type=int, default=2, help="The order of the Norm")
+        parser.add_argument("--optim", choices=["SGD", "Adam"], default="SGD", help="The optimizer to use")
         parser.add_argument("--norm-ord", default=2, help="Ord for norm in scoring function")
-        parser.add_argument("--loss_method", default='relu', choices=['dgl', 'openke', 'relu'], help="Which loss function to use")
-
+        parser.add_argument("--loss_method", default='relu', choices=['dgl', 'openke', 'relu'],
+                            help="Which loss function to use")
         return parser
