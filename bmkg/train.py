@@ -31,14 +31,14 @@ def main():
     parser = model_type.add_args(parser)
     parser = loader_type.add_args(parser)
 
-    # and finally we parse rest arguments and construct model and data_loader
+    # and finally we parse rest arguments and construct model and data_module
     config = parser.parse_args()
-    data_loader = loader_type(config)
+    data_module = loader_type(config)
     model: BMKGModel = model_type(config)
     model = model.cuda()
-    model.do_train(data_loader)
+    model.do_train(data_module)
     if conf.test:
-        model.do_test(data_loader)
+        model.do_test(data_module)
     
 
 

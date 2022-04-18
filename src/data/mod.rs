@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-
+#[allow(clippy::module_inception)]
 mod data;
 mod module;
 

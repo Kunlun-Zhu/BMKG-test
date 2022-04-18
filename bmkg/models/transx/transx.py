@@ -1,5 +1,6 @@
 import abc
 import argparse
+import enum
 import logging
 from tkinter import E
 from typing import Tuple, ClassVar, Type, Union, Optional
@@ -13,15 +14,17 @@ from abc import ABC, abstractmethod
 from torch import nn
 import torch.nn.functional as F
 
-from ...data import TripleDataBatch, TripleDataBatchGPU, DataModule
+from ...data import TripleDataModule, TripleDataBatchGPU, DataModule
 from IPython import embed
 
 
-
 class TransX(BMKGModel, ABC):
+    data_module: TripleDataModule
+
     def __init__(self, config: argparse.Namespace):
         super(TransX, self).__init__(config)
-        self.ranks: list[torch.LongTensor] = []
+        self.ranks: list[torch.Tensor] = []
+        self.raw_ranks: list[torch.Tensor] = []
         self.ent_embed = nn.Embedding(config.ent_size, config.dim, max_norm=1)
         self.rel_embed = nn.Embedding(config.rel_size, config.dim, max_norm=1)
         nn.init.xavier_uniform_(self.ent_embed.weight.data)
@@ -71,37 +74,62 @@ class TransX(BMKGModel, ABC):
 
     def on_valid_start(self) -> None:
         self.ranks = []
+        self.raw_ranks = []
 
     def on_valid_end(self) -> None:
         ranks = torch.cat(self.ranks)
-        self.log('val/MRR', torch.sum(1.0 / ranks) / ranks.shape[0])
-        self.log('val/MR', torch.sum(ranks) / ranks.shape[0])
-        self.log('val/hit1', torch.sum(ranks <= 1) / ranks.shape[0])
-        self.log('val/hit3', torch.sum(ranks <= 3) / ranks.shape[0])
-        self.log('val/hit10', torch.sum(ranks <= 10) / ranks.shape[0])
+        self.log('val/filt/MRR', torch.sum(1.0 / ranks) / ranks.shape[0])
+        self.log('val/filt/MR', torch.sum(ranks) / ranks.shape[0])
+        self.log('val/filt/hit1', torch.sum(ranks <= 1) / ranks.shape[0])
+        self.log('val/filt/hit3', torch.sum(ranks <= 3) / ranks.shape[0])
+        self.log('val/filt/hit10', torch.sum(ranks <= 10) / ranks.shape[0])
+        raw_ranks = torch.cat(self.raw_ranks)
+        self.log('val/raw/MRR', torch.sum(1.0 / raw_ranks) / raw_ranks.shape[0])
+        self.log('val/raw/MR', torch.sum(raw_ranks) / raw_ranks.shape[0])
+        self.log('val/raw/hit1', torch.sum(raw_ranks <= 1) / raw_ranks.shape[0])
+        self.log('val/raw/hit3', torch.sum(raw_ranks <= 3) / raw_ranks.shape[0])
+        self.log('val/raw/hit10', torch.sum(raw_ranks <= 10) / raw_ranks.shape[0])
+        if ranks.shape != raw_ranks.shape:
+            print("Shape mismatch!")
+        if torch.any(ranks > raw_ranks):
+            print(ranks > raw_ranks)
 
     def valid_step(self, batch):
-        pos = batch
+        pos: TripleDataBatchGPU = batch
+        index = torch.arange(pos.r.shape[0], device=pos.r.device)
         pos_score: torch.Tensor = self.forward(pos)
         # corrupt head
         neg_data = TripleDataBatchGPU(
-            torch.arange(0, self.config.ent_size, dtype=torch.int32, device=pos.h.device).view((1, -1)), pos.r.view(-1, 1),
+            torch.arange(0, self.config.ent_size, dtype=torch.int32, device=pos.h.device).view((1, -1)),
+            pos.r.view(-1, 1),
             pos.t.view(-1, 1))
         neg_score: torch.Tensor = self.forward(neg_data)
-        # todo: remove positive edge when counting.
-        rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1)
+        neg_score[index, pos.h.long()] = float('inf')  # filter positive head itself.
+        raw_rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1) + 1
+        for idx, (h, r) in enumerate(zip(pos.cpu.h, pos.cpu.r)):
+            head_map = self.data_module.get_head_map()
+            neg_score[idx][head_map[(h, r)]] = float('inf')
+        rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1) + 1
+        self.raw_ranks.append(raw_rank)
         self.ranks.append(rank)
+
         # corrupt tail
         neg_data = TripleDataBatchGPU(
             pos.h.view(-1, 1), pos.r.view(-1, 1),
             torch.arange(0, self.config.ent_size, dtype=torch.int32, device=pos.h.device).view((1, -1)))
         neg_score: torch.Tensor = self.forward(neg_data)
-        # todo: remove positive edge when counting.
-        rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1)
+        neg_score[index, pos.h.long()] = float('inf')  # filter positive tail itself.
+        raw_rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1) + 1
+        for idx, (t, r) in enumerate(zip(pos.cpu.t, pos.cpu.r)):
+            tail_map = self.data_module.get_tail_map()
+            neg_score[idx][tail_map[(t, r)]] = float('inf')
+        rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1) + 1
+        self.raw_ranks.append(raw_rank)
         self.ranks.append(rank)
 
     def on_test_start(self) -> None:
         self.ranks = []
+        self.raw_ranks = []
 
     def on_test_end(self) -> None:
         ranks = torch.cat(self.ranks)
@@ -110,26 +138,15 @@ class TransX(BMKGModel, ABC):
         self.log('test/hit1', torch.sum(ranks <= 1) / ranks.shape[0])
         self.log('test/hit3', torch.sum(ranks <= 3) / ranks.shape[0])
         self.log('test/hit10', torch.sum(ranks <= 10) / ranks.shape[0])
+        raw_ranks = torch.cat(self.raw_ranks)
+        self.log('test/raw/MRR', torch.sum(1.0 / raw_ranks) / raw_ranks.shape[0])
+        self.log('test/raw/MR', torch.sum(raw_ranks) / raw_ranks.shape[0])
+        self.log('test/raw/hit1', torch.sum(raw_ranks <= 1) / raw_ranks.shape[0])
+        self.log('test/raw/hit3', torch.sum(raw_ranks <= 3) / raw_ranks.shape[0])
+        self.log('test/raw/hit10', torch.sum(raw_ranks <= 10) / raw_ranks.shape[0])
 
     def test_step(self, batch):
-        pos = batch
-        pos_score: torch.Tensor = self.forward(pos)
-        # corrupt head
-        neg_data = TripleDataBatchGPU(
-            torch.arange(0, self.config.ent_size, dtype=torch.int32, device=pos.h.device).view((1, -1)), pos.r.view(-1, 1),
-            pos.t.view(-1, 1))
-        neg_score: torch.Tensor = self.forward(neg_data)
-        # todo: remove positive edge when counting.
-        rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1)
-        self.ranks.append(rank)
-        # corrupt tail
-        neg_data = TripleDataBatchGPU(
-            pos.h.view(-1, 1), pos.r.view(-1, 1),
-            torch.arange(0, self.config.ent_size, dtype=torch.int32, device=pos.h.device).view((1, -1)))
-        neg_score: torch.Tensor = self.forward(neg_data)
-        # todo: remove positive edge when counting.
-        rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1)
-        self.ranks.append(rank)
+        self.valid_step(batch)
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         if self.config.optim == "SGD":

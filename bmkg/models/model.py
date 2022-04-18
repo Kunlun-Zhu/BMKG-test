@@ -14,7 +14,7 @@ from ..data import DataModule
 class BMKGModel(abc.ABC, torch.nn.Module):
     step = 0
     epoch = 0
-    data_loader: DataModule
+    data_module: DataModule
     train_data: Iterable
     valid_data: Iterable
     test_data: Iterable
@@ -116,8 +116,9 @@ class BMKGModel(abc.ABC, torch.nn.Module):
         pass
 
 
-    def do_train(self, data_loader: DataModule):
-        self.train_data = data_loader.train
+    def do_train(self, data_module: DataModule):
+        self.train_data = data_module.train
+        self.data_module = data_module
         self.on_train_start()
         self.train()
         torch.set_grad_enabled(True)
@@ -138,11 +139,12 @@ class BMKGModel(abc.ABC, torch.nn.Module):
             self.epoch += 1
             if self.epoch % self.config.valid_interval == 0:
                 self.train_pbar.write("Validating")
-                self.do_valid(data_loader)
+                self.do_valid(data_module)
 
     @torch.no_grad()
-    def do_valid(self, data_loader: DataModule):
-        self.valid_data = data_loader.valid
+    def do_valid(self, data_module: DataModule):
+        self.valid_data = data_module.valid
+        self.data_module = data_module
         self.on_valid_start()
         self.eval()
         self.valid_pbar = tqdm.tqdm(total=len(self.valid_data))
@@ -153,8 +155,9 @@ class BMKGModel(abc.ABC, torch.nn.Module):
         self.on_valid_end()
         self.train()
 
-    def do_test(self, data_loader: DataModule):
-        self.test_data = data_loader.test
+    def do_test(self, data_module: DataModule):
+        self.test_data = data_module.test
+        self.data_module = data_module
         self.on_test_start()
         self.eval()
         torch.set_grad_enabled(False)

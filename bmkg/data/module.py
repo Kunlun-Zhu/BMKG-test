@@ -1,8 +1,10 @@
 import argparse
 import pathlib
 from abc import ABC
-from typing import Iterable, Any
+from typing import Iterable, Any, Union
 import json
+import numpy
+import torch
 
 from torch.utils.data import DataLoader
 
@@ -78,6 +80,18 @@ class TripleDataModule(DataModule):
         self._module = _TripleDataModule(self, config)
         # TODO: Initialize batch
         # TODO: 回忆一下 『Initialize batch』 是要干啥来着
+    
+    # def calc_rank(self, mode: Union["head", "tail"], pos_data: TripleDataBatch, pos_score: torch.Tensor, neg_score: torch.Tensor):
+    #     return self._module.calc_rank(mode, pos_data.cpu, pos_score.cpu().numpy(), neg_score.cpu().numpy())
+
+    # def gather_ranks(self):
+    #     return torch.from_numpy(self._module.gather_ranks()).cuda()
+    
+    def get_head_map(self):
+        return self._module.head_map
+    
+    def get_tail_map(self):
+        return self._module.tail_map
 
     def collate_fn(self, negative_sample=False):
         def _collate_fn(pos: TripleDataBatch):
@@ -97,7 +111,7 @@ class TripleDataModule(DataModule):
         parser = argparse.ArgumentParser(parents=[parser], add_help=False)
         parser.add_argument('--data_path', type=str, help="Data path")
         parser.add_argument('--train_batch_size', type=int, default=200, help="Train batch size")
-        parser.add_argument('--test_batch_size', type=int, default=50, help="Test batch size")
+        parser.add_argument('--test_batch_size', type=int, default=100, help="Test batch size")
         parser.add_argument('--train_neg_sample', type=int, default=64, help="Number of negative samples while training")
         parser.add_argument('--data_files', type=str, nargs='+', help="Data filename, e.g. train.npy. If 1 file were"
                                                                       "given, it is treated as the training file, or "
