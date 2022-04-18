@@ -11,9 +11,9 @@ import tqdm
 import wandb
 
 from ..data import DataModule
+import bmtrain as bmt
 
-
-class BMKGModel(abc.ABC, torch.nn.Module):
+class BMKGModel(abc.ABC, bmt.DistributedModule):
     step = 0
     epoch = 0
     data_module: DataModule
@@ -31,7 +31,7 @@ class BMKGModel(abc.ABC, torch.nn.Module):
     def __init__(self, config: argparse.Namespace):
         super().__init__()
         self.config = config
-        self.lr = self.config.lr
+        self.lr = config.lr
         self.max_epoch = config.max_epoch
         self.logger = config.logger
         if self.logger == 'wandb':
@@ -44,6 +44,7 @@ class BMKGModel(abc.ABC, torch.nn.Module):
         now = datetime.now()
         self.ckpt_path = pathlib.Path(config.ckpt_path) / type(self).__name__ / now.strftime("%Y-%m-%d-%H-%M-%S")
         self.scores = []
+        self.fused = config.fused
         self.best_models = []
 
     @abstractmethod
@@ -168,15 +169,21 @@ class BMKGModel(abc.ABC, torch.nn.Module):
             self.train()
             torch.set_grad_enabled(True)
             optim = self.configure_optimizers()
+            lr_scheduler = bmt.lr_scheduler.Noam(optim, start_lr=1e-3, warmup_iter=40, end_iter=1000, num_iter=0)
+            bmt.synchronize()
             self.train_pbar = tqdm.tqdm(total=self.max_epoch * len(self.train_data), desc="train")
             for _ in range(self.max_epoch):
                 self.on_epoch_start()
                 for data in self.train_data:
                     self.step += 1
                     loss = self.train_step(data)
+                    if self.fused:
+                    #only when using fused optimizer in bmtrain
+                        loss = optimizer.loss_scale(loss)
                     optim.zero_grad()
                     loss.backward()
-                    optim.step()
+                    #optim.step()
+                    bmt.optim_step(optim, lr_scheduler)
                     self.train_pbar.update(1)
                 self.on_epoch_end()
                 self.step = 0

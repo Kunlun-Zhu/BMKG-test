@@ -16,6 +16,10 @@ import torch.nn.functional as F
 
 from ...data import TripleDataModule, TripleDataBatchGPU, DataModule
 from IPython import embed
+import bmtrain as bmt
+import math
+import torch
+from ..bmtlayers import Embedding
 
 
 class TransX(BMKGModel, ABC):
@@ -26,8 +30,10 @@ class TransX(BMKGModel, ABC):
         super(TransX, self).__init__(config)
         self.ranks: list[torch.Tensor] = []
         self.raw_ranks: list[torch.Tensor] = []
-        self.ent_embed = nn.Embedding(config.ent_size, config.dim, max_norm=1)
-        self.rel_embed = nn.Embedding(config.rel_size, config.dim, max_norm=1)
+        #self.ent_embed = nn.Embedding(config.ent_size, config.dim, max_norm=1)
+        #self.rel_embed = nn.Embedding(config.rel_size, config.dim, max_norm=1)
+        self.ent_embed = Embedding(config.ent_size, config.dim, max_norm=1)
+        self.rel_embed = Embedding(config.rel_size, config.dim, max_norm=1)
         nn.init.xavier_uniform_(self.ent_embed.weight.data)
         nn.init.xavier_uniform_(self.rel_embed.weight.data)
         self.gamma = torch.Tensor([config.gamma]).cuda()

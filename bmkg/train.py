@@ -4,13 +4,17 @@ from typing import Type
 
 from .models import BMKGModel
 from .models.transx.transe import TransE
-
+from .models.transx.transr import TransR
+import torch
+import bmtrain as bmt
 models: dict[str, : Type[BMKGModel]] = {
-    'TransE': TransE
+    'TransE': TransE,
+    'TransR': TransR
 }
 
 
 def main():
+    bmt.init_distributed(seed=0)
     FORMAT = '%(levelname)s %(asctime)-15s %(filename)s:%(lineno)d %(message)s'
     logging.basicConfig(format=FORMAT)
     logging.getLogger().setLevel(logging.INFO)
@@ -33,10 +37,15 @@ def main():
     data_loader = loader_type(config)
     model: BMKGModel = model_type(config)
     model = model.cuda()
+    bmt.init_parameters(model)
+    bmt.print_rank("Model memory")
+    bmt.print_rank(torch.cuda.memory_summary())
+    bmt.synchronize()
     model.do_train(data_loader)
+    bmt.save(model, "./saved_model/checkpoint_" + conf.model  + ".pt")
     if conf.test:
         model.do_test(data_loader)
-
+    
 
 
 if __name__ == '__main__':
