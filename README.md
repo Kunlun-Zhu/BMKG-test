@@ -22,7 +22,7 @@ maturin develop -r
 python3 -m bmkg.preprocess --data_path ${'DATA_PATH'} --data_files train.txt valid.txt test.txt
 
 # Finally you can run the training process with the command
-torchrun --nnodes=1 --nproc_per_node=8 --rdzv_id=1 --rdzv_backend=c10d --rdzv_endpoint=localhost train.py --model ${'MODEL_NAME'} --test --data_path ${'DATA_PATH'} --data_files train.npy valid.npy test.npy
+torchrun --nnodes=1 --nproc_per_node=8 --rdzv_id=1 --rdzv_backend=c10d --rdzv_endpoint=localhost train.py --model ${'MODEL_NAME'} --test --fused --optim Bmtrain --data_path ${'DATA_PATH'} --data_files train.npy valid.npy test.npy
 
 ```
 
