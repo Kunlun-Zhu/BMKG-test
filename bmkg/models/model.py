@@ -1,17 +1,19 @@
 import abc
 import argparse
 import logging
+import pathlib
 from abc import abstractmethod
 from typing import Union, Type, Iterable
+from datetime import datetime
 
 import torch
 import tqdm
 import wandb
 
 from ..data import DataModule
-import bmtrain as bmt
 
-class BMKGModel(abc.ABC, bmt.DistributedModule):
+
+class BMKGModel(abc.ABC, torch.nn.Module):
     step = 0
     epoch = 0
     data_module: DataModule
@@ -21,15 +23,17 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
     valid_pbar: tqdm.tqdm
     train_pbar: tqdm.tqdm
     test_pbar: tqdm.tqdm
+    scores: list[float]
+    score_name: str = "unknown"
+    # [ (score, save_path) ]
+    best_models: list[(float, pathlib.Path)]
 
-    def __init__(self, config: argparse.Namespace, fused=False):
+    def __init__(self, config: argparse.Namespace):
         super().__init__()
         self.config = config
         self.lr = self.config.lr
         self.max_epoch = config.max_epoch
         self.logger = config.logger
-        #to determined wether used fused optimzer in bmtrain
-        self.fused = fused
         if self.logger == 'wandb':
             wandb.init(
                 project="BMKG",
@@ -37,7 +41,10 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
                 entity="leo_test_team",
                 config=config
             )
-        # TODO: INITIALIZE LOGGER
+        now = datetime.now()
+        self.ckpt_path = pathlib.Path(config.ckpt_path) / type(self).__name__ / now.strftime("%Y-%m-%d-%H-%M-%S")
+        self.scores = []
+        self.best_models = []
 
     @abstractmethod
     def forward(self, *args, **kwargs):
@@ -117,39 +124,74 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
         """
         pass
 
+    def _save_model(self):
+        self.ckpt_path.mkdir(parents=True, exist_ok=True)
+        save_path = self.ckpt_path / f"epoch-{self.epoch}-{self.score_name}-{self.scores[-1]:.4f}.ckpt"
+        torch.save(self.state_dict(), save_path)
+        self.best_models.append((self.scores[-1], save_path))
+
+    def save_model(self) -> bool:
+        if len(self.scores) == 0:
+            return False
+        if not self.config.ckpt:
+            return False
+        if self.config.ckpt_mode == 'all':
+            logging.info("Saving model")
+            self._save_model()
+        elif self.config.ckpt_mode == 'best':
+            if len(self.best_models) < self.config.ckpt_best_n:
+                logging.info("Saving best models")
+                # just save
+                self._save_model()
+            else:
+                smallest_score: tuple[float, pathlib.Path] = min(self.best_models, key=lambda x: x[0])
+                if self.scores[-1] > smallest_score[0]:
+                    logging.info("Replacing best models")
+                    smallest_score[1].unlink()
+                    self.best_models.remove(smallest_score)
+                    self._save_model()
+        if self.config.early_stopping and len(self.scores) >= self.config.early_stopping_tolerance:
+            stop = True
+            for i in range(-self.config.early_stopping_tolerance, 0):
+                if self.scores[i] <= self.scores[i + 1]:
+                    stop = False
+                    break
+            if stop:
+                return True
+        return False
 
     def do_train(self, data_module: DataModule):
-        self.train_data = data_module.train
-        self.data_module = data_module
-        self.on_train_start()
-        self.train()
-        torch.set_grad_enabled(True)
-        optim = self.configure_optimizers()
-        lr_scheduler = bmt.lr_scheduler.Noam(optim, start_lr=1e-3, warmup_iter=40, end_iter=1000, num_iter=0)
-        bmt.synchronize()
-        avg_time_recorder = bmt.utils.AverageRecorder()
-        avg_loss_recorder = bmt.utils.AverageRecorder()
-        self.train_pbar = tqdm.tqdm(total=self.max_epoch * len(self.train_data))
-        for _ in range(self.max_epoch):
-            self.on_epoch_start()
-            for data in self.train_data:
-                self.step += 1
-                loss = self.train_step(data)
-                if self.fused:
-                    #only when using fused optimizer in bmtrain
-                    loss = optimizer.loss_scale(loss)
-                optim.zero_grad()
-                loss.backward()
-                #optim.step()
-                bmt.optim_step(optim, lr_scheduler)
-                self.train_pbar.update(1)
-            # TODO: SAVE MODEL
-            self.on_epoch_end()
-            self.step = 0
-            self.epoch += 1
-            if self.epoch % self.config.valid_interval == 0:
-                self.train_pbar.write("Validating")
-                self.do_valid(data_module)
+        try:
+            self.train_data = data_module.train
+            self.data_module = data_module
+            self.on_train_start()
+            self.train()
+            torch.set_grad_enabled(True)
+            optim = self.configure_optimizers()
+            self.train_pbar = tqdm.tqdm(total=self.max_epoch * len(self.train_data), desc="train")
+            for _ in range(self.max_epoch):
+                self.on_epoch_start()
+                for data in self.train_data:
+                    self.step += 1
+                    loss = self.train_step(data)
+                    optim.zero_grad()
+                    loss.backward()
+                    optim.step()
+                    self.train_pbar.update(1)
+                self.on_epoch_end()
+                self.step = 0
+                self.epoch += 1
+                if self.epoch % self.config.valid_interval == 0:
+                    self.train_pbar.write("Validating")
+                    self.do_valid(data_module)
+                    if self.save_model():
+                        logging.info(f"Early stopping on {self.epoch=}")
+                        return
+        except KeyboardInterrupt:
+            logging.warning("Stopping test!")
+            logging.warning("Saving model, just in case")
+            logging.warning("Press Ctrl-C Again to force quit")
+            self.save_model()
 
     @torch.no_grad()
     def do_valid(self, data_module: DataModule):
@@ -157,7 +199,7 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
         self.data_module = data_module
         self.on_valid_start()
         self.eval()
-        self.valid_pbar = tqdm.tqdm(total=len(self.valid_data))
+        self.valid_pbar = tqdm.tqdm(total=len(self.valid_data), desc="valid")
         for data in self.valid_data:
             self.step += 1
             self.valid_step(data)
@@ -166,12 +208,16 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
         self.train()
 
     def do_test(self, data_module: DataModule):
+        if len(self.best_models) != 0:
+            path = max(self.best_models, key=lambda x: x[0])[1]
+            logging.info(f"Loading best model {path=} to test")
+            self.load_state_dict(torch.load(path))
         self.test_data = data_module.test
         self.data_module = data_module
         self.on_test_start()
         self.eval()
         torch.set_grad_enabled(False)
-        self.test_pbar = tqdm.tqdm(total=len(self.test_data))
+        self.test_pbar = tqdm.tqdm(total=len(self.test_data), desc="test")
         for data in self.test_data:
             self.step += 1
             self.test_step(data)
@@ -196,5 +242,18 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
         parser.add_argument('--lr', type=float, default=0.5, help="Learning rate")
         parser.add_argument('--max_epoch', type=int, default=1, help="How many epochs to run")
         parser.add_argument('--logger', choices=['wandb', 'none'], default='wandb', help="Which logger to use")
-        parser.add_argument('--valid_interval', default=1, type=int, help="How many epochs to run before validating")
+        parser.add_argument('--valid_interval', default=1, type=int,
+                            help="How many epochs to run before validating"
+                                 "Note that this parameter will effect early stopping")
+        parser.add_argument('--ckpt_path', default="./data/ckpt", help="Checkpoint path")
+        parser.add_argument('--early_stopping', default=True,
+                            help="Whether to stop training if the performance isn't improving")
+        parser.add_argument('--early_stopping_tolerance', default=3, type=int,
+                            help="Number of epochs to wait before early stopping")
+        parser.add_argument('--not_ckpt', dest="ckpt", default=True, action="store_false",
+                            help="Don't save check points")
+        parser.add_argument('--ckpt_mode', choices=['all', 'best'], default='best',
+                            help="Whether to save all models or only best n models.")
+        parser.add_argument('--ckpt_best_n', default=3, type=int,
+                            help="How many best models to save when `ckpt_model` is `best`.")
         return parser

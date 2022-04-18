@@ -16,20 +16,18 @@ import torch.nn.functional as F
 
 from ...data import TripleDataModule, TripleDataBatchGPU, DataModule
 from IPython import embed
-import bmtrain as bmt
-import math
-import torch
-from ..bmtlayers import Embedding
+
 
 class TransX(BMKGModel, ABC):
     data_module: TripleDataModule
+    score_name = "hits10"
 
     def __init__(self, config: argparse.Namespace):
         super(TransX, self).__init__(config)
         self.ranks: list[torch.Tensor] = []
         self.raw_ranks: list[torch.Tensor] = []
-        self.ent_embed = Embedding(config.ent_size, config.dim, max_norm=1)
-        self.rel_embed = Embedding(config.rel_size, config.dim, max_norm=1)
+        self.ent_embed = nn.Embedding(config.ent_size, config.dim, max_norm=1)
+        self.rel_embed = nn.Embedding(config.rel_size, config.dim, max_norm=1)
         nn.init.xavier_uniform_(self.ent_embed.weight.data)
         nn.init.xavier_uniform_(self.rel_embed.weight.data)
         self.gamma = torch.Tensor([config.gamma]).cuda()
@@ -46,11 +44,11 @@ class TransX(BMKGModel, ABC):
         :param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
         :param tails: torch.Tensor() shaped (batch_size) or (batch_size, neg_sample_size), containing the id for the tail entity.
         :param args: Additional arguments given by dataset.
-        
+
         When training, both heads and tails are (batch_size).
         When testing, one of heads and tails are (batch_size, neg_sample_size).
         You should use boardcasting operation to calculate score.
-        
+
         :return: torch.Tensor() shaped (batch_size) or (batch_sizem neg_sample_size), depending on whether training or testing.
         The individual score for each
         """
@@ -96,6 +94,8 @@ class TransX(BMKGModel, ABC):
             print("Shape mismatch!")
         if torch.any(ranks > raw_ranks):
             print(ranks > raw_ranks)
+        # push hit@10 to scores for early_stopping
+        self.scores.append(torch.sum(ranks <= 10) / ranks.shape[0])
 
     def valid_step(self, batch):
         pos: TripleDataBatchGPU = batch
