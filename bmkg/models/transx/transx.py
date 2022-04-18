@@ -156,6 +156,8 @@ class TransX(BMKGModel, ABC):
             return torch.optim.SGD(self.parameters(), lr=self.lr)
         elif self.config.optim == "Adam":
             return torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=0)
+        elif self.config.optim == "Bmtrain":
+            optimizer = bmt.optim.AdamOffloadOptimizer(self.parameters(), weight_decay=1e-2, scale=2**20)
 
     def forward(self, pos: TripleDataBatchGPU, neg: Optional[TripleDataBatchGPU] = None) -> Union[
         Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:

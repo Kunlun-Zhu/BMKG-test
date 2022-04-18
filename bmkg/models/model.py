@@ -22,12 +22,14 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
     train_pbar: tqdm.tqdm
     test_pbar: tqdm.tqdm
 
-    def __init__(self, config: argparse.Namespace):
+    def __init__(self, config: argparse.Namespace, fused=False):
         super().__init__()
         self.config = config
         self.lr = self.config.lr
         self.max_epoch = config.max_epoch
         self.logger = config.logger
+        #to determined wether used fused optimzer in bmtrain
+        self.fused = fused
         if self.logger == 'wandb':
             wandb.init(
                 project="BMKG",
@@ -133,6 +135,9 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
             for data in self.train_data:
                 self.step += 1
                 loss = self.train_step(data)
+                if self.fused:
+                    #only when using fused optimizer in bmtrain
+                    loss = optimizer.loss_scale(loss)
                 optim.zero_grad()
                 loss.backward()
                 #optim.step()
