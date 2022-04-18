@@ -1,6 +1,8 @@
 import argparse
 import logging
+import torch
 from typing import Type
+
 from .models import BMKGModel
 from .models.transx.transe import TransE
 import bmtrain as bmt
@@ -11,9 +13,8 @@ models: dict[str, : Type[BMKGModel]] = {
 
 
 def main():
-
     bmt.init_distributed(seed=0)
-
+    print(torch.cuda.is_available())
     FORMAT = '%(levelname)s %(asctime)-15s %(filename)s:%(lineno)d %(message)s'
     logging.basicConfig(format=FORMAT)
     logging.getLogger().setLevel(logging.INFO)
@@ -30,9 +31,9 @@ def main():
     parser = model_type.add_args(parser)
     parser = loader_type.add_args(parser)
 
-    # and finally we parse rest arguments and construct model and data_loader
+    # and finally we parse rest arguments and construct model and data_module
     config = parser.parse_args()
-    data_loader = loader_type(config)
+    data_module = loader_type(config)
     model: BMKGModel = model_type(config)
     model = model.cuda()
     #init model parameters using bmt.init_parameters
@@ -40,11 +41,9 @@ def main():
     bmt.print_rank("Model memory")
     bmt.print_rank(torch.cuda.memory_summary())
     bmt.synchronize()
-
-    model.do_train(data_loader)
+    model.do_train(data_module)
     if conf.test:
-        model.do_test(data_loader)
-
+        model.do_test(data_module)
     #bmt save models       
     bmt.save(model, "checkpoint_" + conf.model  + ".pt")
 

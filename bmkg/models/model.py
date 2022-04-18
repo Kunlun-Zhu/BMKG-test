@@ -3,17 +3,18 @@ import argparse
 import logging
 from abc import abstractmethod
 from typing import Union, Type, Iterable
+
 import torch
 import tqdm
 import wandb
-from ..data import DataLoader
-import bmtrain as bmt
 
+from ..data import DataModule
+import bmtrain as bmt
 
 class BMKGModel(abc.ABC, bmt.DistributedModule):
     step = 0
     epoch = 0
-    data_loader: DataLoader
+    data_module: DataModule
     train_data: Iterable
     valid_data: Iterable
     test_data: Iterable
@@ -27,13 +28,11 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
         self.lr = self.config.lr
         self.max_epoch = config.max_epoch
         self.logger = config.logger
-
-        self.fused = False
-
         if self.logger == 'wandb':
             wandb.init(
                 project="BMKG",
                 tags=[config.model],
+                entity="leo_test_team",
                 config=config
             )
         # TODO: INITIALIZE LOGGER
@@ -58,7 +57,7 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
 
     @staticmethod
     @abstractmethod
-    def load_data() -> Type[DataLoader]:
+    def load_data() -> Type[DataModule]:
         pass
 
     def on_train_start(self) -> None:
@@ -117,8 +116,9 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
         pass
 
 
-    def do_train(self, data_loader: DataLoader):
-        self.train_data = data_loader.train
+    def do_train(self, data_module: DataModule):
+        self.train_data = data_module.train
+        self.data_module = data_module
         self.on_train_start()
         self.train()
         torch.set_grad_enabled(True)
@@ -127,42 +127,31 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
         bmt.synchronize()
         avg_time_recorder = bmt.utils.AverageRecorder()
         avg_loss_recorder = bmt.utils.AverageRecorder()
-
         self.train_pbar = tqdm.tqdm(total=self.max_epoch * len(self.train_data))
-        for data in self.train_data:
-            self.step += 1
-            loss = self.train_step(data)
+        for _ in range(self.max_epoch):
+            self.on_epoch_start()
+            for data in self.train_data:
+                self.step += 1
+                loss = self.train_step(data)
+                optim.zero_grad()
+                loss.backward()
+                #optim.step()
+                bmt.optim_step(optim, lr_scheduler)
+                self.train_pbar.update(1)
+            # TODO: SAVE MODEL
+            self.on_epoch_end()
+            self.step = 0
+            self.epoch += 1
+            if self.epoch % self.config.valid_interval == 0:
+                self.train_pbar.write("Validating")
+                self.do_valid(data_module)
 
-            if self.fused == True:
-                loss = optim.loss_scale(loss) #only when using fused optimizer
-            
-            optim.zero_grad()
-            
-            loss.backward()
-            #optim.step()
-
-            bmt.optim_step(optim, lr_scheduler)
-
-            #bmt.wait_optimizer() # when using loader stream wait for optimizer
-
-            self.train_pbar.update(1)
-            if self.step % len(self.train_data) == 0:
-                # TODO: SAVE MODEL
-                self.on_epoch_end()
-                self.step = 0
-                self.epoch += 1
-                if self.epoch % self.config.valid_interval == 0:
-                    self.train_pbar.write("Validating")
-                    self.do_valid(data_loader)
-            if self.epoch == self.max_epoch:
-                break
-
-
-    def do_valid(self, data_loader: DataLoader):
-        self.valid_data = data_loader.valid
+    @torch.no_grad()
+    def do_valid(self, data_module: DataModule):
+        self.valid_data = data_module.valid
+        self.data_module = data_module
         self.on_valid_start()
         self.eval()
-        torch.set_grad_enabled(False)
         self.valid_pbar = tqdm.tqdm(total=len(self.valid_data))
         for data in self.valid_data:
             self.step += 1
@@ -170,10 +159,10 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
             self.valid_pbar.update(1)
         self.on_valid_end()
         self.train()
-        torch.set_grad_enabled(True)
 
-    def do_test(self, data_loader: DataLoader):
-        self.test_data = data_loader.test
+    def do_test(self, data_module: DataModule):
+        self.test_data = data_module.test
+        self.data_module = data_module
         self.on_test_start()
         self.eval()
         torch.set_grad_enabled(False)

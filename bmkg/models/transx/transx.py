@@ -1,8 +1,9 @@
 import abc
 import argparse
+import enum
 import logging
 from tkinter import E
-from typing import Tuple, ClassVar, Type, Union
+from typing import Tuple, ClassVar, Type, Union, Optional
 
 import numpy
 import torch.optim
@@ -12,38 +13,51 @@ from ..model import BMKGModel
 from abc import ABC, abstractmethod
 from torch import nn
 import torch.nn.functional as F
-import bmtrain as bmt
-from ...data import TripleDataBatch, DataLoader, TripleDataLoader, RandomCorruptSampler, RandomChoiceSampler
 
+from ...data import TripleDataModule, TripleDataBatchGPU, DataModule
+from IPython import embed
+import bmtrain as bmt
 import math
-from typing import Optional
 import torch
+from ..bmtlayers import Embedding
 
 class TransX(BMKGModel, ABC):
+    data_module: TripleDataModule
+
     def __init__(self, config: argparse.Namespace):
         super(TransX, self).__init__(config)
-        self.ranks: list[torch.LongTensor] = []
+        self.ranks: list[torch.Tensor] = []
+        self.raw_ranks: list[torch.Tensor] = []
         self.ent_embed = Embedding(config.ent_size, config.dim, max_norm=1)
         self.rel_embed = Embedding(config.rel_size, config.dim, max_norm=1)
         nn.init.xavier_uniform_(self.ent_embed.weight.data)
         nn.init.xavier_uniform_(self.rel_embed.weight.data)
         self.gamma = torch.Tensor([config.gamma]).cuda()
         self.p_norm = config.p_norm
+        with torch.no_grad():
+            self.rel_embed.weight /= torch.norm(self.rel_embed.weight, p=self.p_norm, dim=-1)[:, None]
 
     @abstractmethod
     def scoring_function(self, heads, rels, tails, *args):
         """
         scoring_function defines a scoring function for a TransX-like model.
 
-        :param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.
+        :param heads: torch.Tensor() shaped (batch_size) or (batch_size, neg_sample_size), containing the id for the head entity.
         :param rels: torch.Tensor() shaped (batch_size), containing the id for the relation.
-        :param tails: torch.Tensor() shaped (batch_size), containing the id for the tail entity.
+        :param tails: torch.Tensor() shaped (batch_size) or (batch_size, neg_sample_size), containing the id for the tail entity.
         :param args: Additional arguments given by dataset.
-        :return: torch.Tensor() shaped (batch_size). The individual score for each
+        
+        When training, both heads and tails are (batch_size).
+        When testing, one of heads and tails are (batch_size, neg_sample_size).
+        You should use boardcasting operation to calculate score.
+        
+        :return: torch.Tensor() shaped (batch_size) or (batch_sizem neg_sample_size), depending on whether training or testing.
+        The individual score for each
         """
 
     def train_step(self, batch):
         pos, neg = self.forward(*batch)
+        neg: torch.Tensor = neg.mean(-1)
         # TODO: regularization
         if self.config.loss_method == 'dgl':
             # dgl-ke style loss
@@ -63,36 +77,62 @@ class TransX(BMKGModel, ABC):
 
     def on_valid_start(self) -> None:
         self.ranks = []
+        self.raw_ranks = []
 
     def on_valid_end(self) -> None:
         ranks = torch.cat(self.ranks)
-        self.log('val/MRR', torch.sum(1.0 / ranks) / ranks.shape[0])
-        self.log('val/MR', torch.sum(ranks) / ranks.shape[0])
-        self.log('val/hit1', torch.sum(ranks <= 1) / ranks.shape[0])
-        self.log('val/hit3', torch.sum(ranks <= 3) / ranks.shape[0])
-        self.log('val/hit10', torch.sum(ranks <= 10) / ranks.shape[0])
+        self.log('val/filt/MRR', torch.sum(1.0 / ranks) / ranks.shape[0])
+        self.log('val/filt/MR', torch.sum(ranks) / ranks.shape[0])
+        self.log('val/filt/hit1', torch.sum(ranks <= 1) / ranks.shape[0])
+        self.log('val/filt/hit3', torch.sum(ranks <= 3) / ranks.shape[0])
+        self.log('val/filt/hit10', torch.sum(ranks <= 10) / ranks.shape[0])
+        raw_ranks = torch.cat(self.raw_ranks)
+        self.log('val/raw/MRR', torch.sum(1.0 / raw_ranks) / raw_ranks.shape[0])
+        self.log('val/raw/MR', torch.sum(raw_ranks) / raw_ranks.shape[0])
+        self.log('val/raw/hit1', torch.sum(raw_ranks <= 1) / raw_ranks.shape[0])
+        self.log('val/raw/hit3', torch.sum(raw_ranks <= 3) / raw_ranks.shape[0])
+        self.log('val/raw/hit10', torch.sum(raw_ranks <= 10) / raw_ranks.shape[0])
+        if ranks.shape != raw_ranks.shape:
+            print("Shape mismatch!")
+        if torch.any(ranks > raw_ranks):
+            print(ranks > raw_ranks)
 
     def valid_step(self, batch):
-        pos = batch
+        pos: TripleDataBatchGPU = batch
+        index = torch.arange(pos.r.shape[0], device=pos.r.device)
         pos_score: torch.Tensor = self.forward(pos)
         # corrupt head
-        neg_data = TripleDataBatch(
-            numpy.arange(0, self.config.ent_size, dtype=numpy.int32).reshape((1, -1)), pos.r.reshape(-1, 1), pos.t.reshape(-1, 1))
+        neg_data = TripleDataBatchGPU(
+            torch.arange(0, self.config.ent_size, dtype=torch.int32, device=pos.h.device).view((1, -1)),
+            pos.r.view(-1, 1),
+            pos.t.view(-1, 1))
         neg_score: torch.Tensor = self.forward(neg_data)
-        # todo: remove positive edge when counting.
-        rank = torch.sum(neg_score <= pos_score.reshape(-1, 1), dim=1)
+        neg_score[index, pos.h.long()] = float('inf')  # filter positive head itself.
+        raw_rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1) + 1
+        for idx, (h, r) in enumerate(zip(pos.cpu.h, pos.cpu.r)):
+            head_map = self.data_module.get_head_map()
+            neg_score[idx][head_map[(h, r)]] = float('inf')
+        rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1) + 1
+        self.raw_ranks.append(raw_rank)
         self.ranks.append(rank)
+
         # corrupt tail
-        neg_data = TripleDataBatch(
-            pos.h.reshape(-1, 1), pos.r.reshape(-1, 1), numpy.arange(0, self.config.ent_size, dtype=numpy.int32).reshape((1, -1)))
+        neg_data = TripleDataBatchGPU(
+            pos.h.view(-1, 1), pos.r.view(-1, 1),
+            torch.arange(0, self.config.ent_size, dtype=torch.int32, device=pos.h.device).view((1, -1)))
         neg_score: torch.Tensor = self.forward(neg_data)
-        # todo: remove positive edge when counting.
-        rank = torch.sum(neg_score <= pos_score.reshape(-1, 1), dim=1)
+        neg_score[index, pos.h.long()] = float('inf')  # filter positive tail itself.
+        raw_rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1) + 1
+        for idx, (t, r) in enumerate(zip(pos.cpu.t, pos.cpu.r)):
+            tail_map = self.data_module.get_tail_map()
+            neg_score[idx][tail_map[(t, r)]] = float('inf')
+        rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1) + 1
+        self.raw_ranks.append(raw_rank)
         self.ranks.append(rank)
-        
-        
+
     def on_test_start(self) -> None:
         self.ranks = []
+        self.raw_ranks = []
 
     def on_test_end(self) -> None:
         ranks = torch.cat(self.ranks)
@@ -101,62 +141,40 @@ class TransX(BMKGModel, ABC):
         self.log('test/hit1', torch.sum(ranks <= 1) / ranks.shape[0])
         self.log('test/hit3', torch.sum(ranks <= 3) / ranks.shape[0])
         self.log('test/hit10', torch.sum(ranks <= 10) / ranks.shape[0])
+        raw_ranks = torch.cat(self.raw_ranks)
+        self.log('test/raw/MRR', torch.sum(1.0 / raw_ranks) / raw_ranks.shape[0])
+        self.log('test/raw/MR', torch.sum(raw_ranks) / raw_ranks.shape[0])
+        self.log('test/raw/hit1', torch.sum(raw_ranks <= 1) / raw_ranks.shape[0])
+        self.log('test/raw/hit3', torch.sum(raw_ranks <= 3) / raw_ranks.shape[0])
+        self.log('test/raw/hit10', torch.sum(raw_ranks <= 10) / raw_ranks.shape[0])
 
     def test_step(self, batch):
-        pos = batch
-        pos_score: torch.Tensor = self.forward(pos)
-        # corrupt head
-        neg_data = TripleDataBatch(
-            numpy.arange(0, self.config.ent_size, dtype=numpy.int32).reshape((1, -1)), pos.r.reshape(-1, 1), pos.t.reshape(-1, 1))
-        neg_score: torch.Tensor = self.forward(neg_data)
-        # todo: remove positive edge when counting.
-        rank = torch.sum(neg_score <= pos_score.reshape(-1, 1), dim=1)
-        self.ranks.append(rank)
-        # corrupt tail
-        neg_data = TripleDataBatch(
-            pos.h.reshape(-1, 1), pos.r.reshape(-1, 1), numpy.arange(0, self.config.ent_size, dtype=numpy.int32).reshape((1, -1)))
-        neg_score: torch.Tensor = self.forward(neg_data)
-        # todo: remove positive edge when counting.
-        rank = torch.sum(neg_score <= pos_score.reshape(-1, 1), dim=1)
-        self.ranks.append(rank)
+        self.valid_step(batch)
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
-        return torch.optim.SGD(self.parameters(), lr=self.lr)
+        if self.config.optim == "SGD":
+            return torch.optim.SGD(self.parameters(), lr=self.lr)
+        elif self.config.optim == "Adam":
+            return torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=0)
 
-    def forward(self, pos, neg=None) -> Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
+    def forward(self, pos: TripleDataBatchGPU, neg: Optional[TripleDataBatchGPU] = None) -> Union[
+        Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
         # TODO: Data
         if neg is not None:
-            posh = torch.LongTensor(pos.h).cuda()
-            posr = torch.LongTensor(pos.r).cuda()
-            post = torch.LongTensor(pos.t).cuda()
-            negh = torch.LongTensor(neg.h).cuda()
-            negr = torch.LongTensor(neg.r).cuda()
-            negt = torch.LongTensor(neg.t).cuda()
-            pos_score = self.scoring_function(posh, posr, post)
-            neg_score = self.scoring_function(negh, negr, negt)
+            pos_score = self.scoring_function(pos.h, pos.r, pos.t)
+            neg_score = self.scoring_function(neg.h, neg.r, neg.t)
             return pos_score, neg_score
         else:
-            posh = torch.LongTensor(pos.h).cuda()
-            posr = torch.LongTensor(pos.r).cuda()
-            post = torch.LongTensor(pos.t).cuda()
-            pos_score = self.scoring_function(posh, posr, post)
+            pos_score = self.scoring_function(pos.h, pos.r, pos.t)
             return pos_score
 
-    def on_epoch_end(self):
-        torch.set_grad_enabled(False)
-        self.ent_embed.weight /= torch.norm(self.ent_embed.weight, p=self.p_norm, dim=-1)[:, None]
-        self.rel_embed.weight /= torch.norm(self.rel_embed.weight, p=self.p_norm, dim=-1)[:, None]
-        torch.set_grad_enabled(True)
-
-    def on_train_start(self):
-        head_sampler = RandomCorruptSampler(self.train_data, self.config.ent_size, mode='head')
-        tail_sampler = RandomCorruptSampler(self.train_data, self.config.ent_size, mode='tail')
-        combined = RandomChoiceSampler([head_sampler, tail_sampler])
-        self.train_data = combined
+    def on_epoch_start(self):
+        with torch.no_grad():
+            self.ent_embed.weight /= torch.norm(self.ent_embed.weight, p=self.p_norm, dim=-1)[:, None]
 
     @staticmethod
-    def load_data() -> Type[DataLoader]:
-        return bmkg.data.TripleDataLoader
+    def load_data() -> Type[DataModule]:
+        return bmkg.data.TripleDataModule
 
     @classmethod
     def add_args(cls, parser: argparse.ArgumentParser):
@@ -165,100 +183,8 @@ class TransX(BMKGModel, ABC):
         parser.add_argument("--dim", type=int, default=128, help="The embedding dimension for relations and entities")
         parser.add_argument("--gamma", type=float, default=15.0, help="The gamma for max-margin loss")
         parser.add_argument("--p_norm", type=int, default=2, help="The order of the Norm")
+        parser.add_argument("--optim", choices=["SGD", "Adam"], default="SGD", help="The optimizer to use")
         parser.add_argument("--norm-ord", default=2, help="Ord for norm in scoring function")
-        parser.add_argument("--loss_method", default='relu', choices=['dgl', 'openke', 'relu'], help="Which loss function to use")
-
+        parser.add_argument("--loss_method", default='relu', choices=['dgl', 'openke', 'relu'],
+                            help="Which loss function to use")
         return parser
-
-class Embedding(bmt.DistributedModule):
-    def __init__(self, num_embeddings: int, embedding_dim: int, padding_idx: Optional[int] = None,
-                 max_norm: Optional[float] = None, norm_type: float = 2., scale_grad_by_freq: bool = False,
-                 sparse: bool = False, _weight: Optional[torch.Tensor] = None,
-                 dtype=None):
-        super().__init__()
-
-        self.num_embeddings = num_embeddings
-        self.embedding_dim = embedding_dim
-        if padding_idx is not None:
-            if padding_idx > 0:
-                assert padding_idx < self.num_embeddings, 'Padding_idx must be within num_embeddings'
-            elif padding_idx < 0:
-                assert padding_idx >= -self.num_embeddings, 'Padding_idx must be within num_embeddings'
-                padding_idx = self.num_embeddings + padding_idx
-        self.padding_idx = padding_idx
-        self.max_norm = max_norm
-        self.norm_type = norm_type
-        self.scale_grad_by_freq = scale_grad_by_freq
-        if _weight is None:
-            self.weight = bmt.DistributedParameter(torch.empty(num_embeddings, embedding_dim, dtype=dtype, device="cuda"), init_method=torch.nn.init.normal_)
-        else:
-            self.weight = bmt.DistributedParameter(_weight)
-        
-        self.sparse = sparse
-    
-    @classmethod
-    def from_pretrained(cls, embeddings, freeze=True, padding_idx=None,
-                        max_norm=None, norm_type=2., scale_grad_by_freq=False,
-                        sparse=False):
-        r"""Creates Embedding instance from given 2-dimensional FloatTensor.
-
-        Args:
-            embeddings (Tensor): FloatTensor containing weights for the Embedding.
-                First dimension is being passed to Embedding as ``num_embeddings``, second as ``embedding_dim``.
-            freeze (boolean, optional): If ``True``, the tensor does not get updated in the learning process.
-                Equivalent to ``embedding.weight.requires_grad = False``. Default: ``True``
-            padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
-                                         therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
-                                         i.e. it remains as a fixed "pad".
-            max_norm (float, optional): See module initialization documentation.
-            norm_type (float, optional): See module initialization documentation. Default ``2``.
-            scale_grad_by_freq (boolean, optional): See module initialization documentation. Default ``False``.
-            sparse (bool, optional): See module initialization documentation.
-
-        Examples::
-
-            >>> # FloatTensor containing pretrained weights
-            >>> weight = torch.FloatTensor([[1, 2.3, 3], [4, 5.1, 6.3]])
-            >>> embedding = nn.Embedding.from_pretrained(weight)
-            >>> # Get embeddings for index 1
-            >>> input = torch.LongTensor([1])
-            >>> embedding(input)
-            tensor([[ 4.0000,  5.1000,  6.3000]])
-        """
-        assert embeddings.dim() == 2, \
-            'Embeddings parameter is expected to be 2-dimensional'
-        rows, cols = embeddings.shape
-        embedding = cls(
-            num_embeddings=rows,
-            embedding_dim=cols,
-            _weight=embeddings,
-            padding_idx=padding_idx,
-            max_norm=max_norm,
-            norm_type=norm_type,
-            scale_grad_by_freq=scale_grad_by_freq,
-            sparse=sparse)
-        embedding.weight.requires_grad = not freeze
-        return embedding
-
-    def forward(self, input: torch.Tensor, projection : bool = False) -> torch.Tensor:
-        if not projection:
-            return F.embedding(
-                input, self.weight, self.padding_idx, self.max_norm,
-                self.norm_type, self.scale_grad_by_freq, self.sparse)
-        else:
-            return F.linear(input, self.weight) / math.sqrt(self.embedding_dim)
-
-    def extra_repr(self) -> str:
-        s = '{num_embeddings}, {embedding_dim}'
-        if self.padding_idx is not None:
-            s += ', padding_idx={padding_idx}'
-        if self.max_norm is not None:
-            s += ', max_norm={max_norm}'
-        if self.norm_type != 2:
-            s += ', norm_type={norm_type}'
-        if self.scale_grad_by_freq is not False:
-            s += ', scale_grad_by_freq={scale_grad_by_freq}'
-        if self.sparse is not False:
-            s += ', sparse=True'
-        return s.format(**self.__dict__)
-
