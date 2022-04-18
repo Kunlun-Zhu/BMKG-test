@@ -9,6 +9,7 @@ import torch
 import bmtrain as bmt
 import sys
 from os.path import dirname
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 models: dict[str, : Type[BMKGModel]] = {
     'TransE': TransE
