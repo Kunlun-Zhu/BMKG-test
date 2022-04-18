@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--model', type=str, required=True, choices=models.keys(), help="which model to use.")
     parser.add_argument('--not_train', dest="train", default=True, action="store_false", help="Not train")
     parser.add_argument('--test', dest="test", default=False, action="store_true", help="Test the model")
+    parser.add_argument('--fused', default=False, help="Whether use Bmtrain fused optimizer")
     conf, _ = parser.parse_known_args()
 
     # then we gather arguments for model and dataloader

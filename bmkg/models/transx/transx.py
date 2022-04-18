@@ -185,7 +185,7 @@ class TransX(BMKGModel, ABC):
         parser.add_argument("--dim", type=int, default=128, help="The embedding dimension for relations and entities")
         parser.add_argument("--gamma", type=float, default=15.0, help="The gamma for max-margin loss")
         parser.add_argument("--p_norm", type=int, default=2, help="The order of the Norm")
-        parser.add_argument("--optim", choices=["SGD", "Adam"], default="SGD", help="The optimizer to use")
+        parser.add_argument("--optim", choices=["SGD", "Adam", "Bmtrain"], default="SGD", help="The optimizer to use")
         parser.add_argument("--norm-ord", default=2, help="Ord for norm in scoring function")
         parser.add_argument("--loss_method", default='relu', choices=['dgl', 'openke', 'relu'],
                             help="Which loss function to use")
