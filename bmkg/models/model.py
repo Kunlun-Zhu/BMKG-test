@@ -5,13 +5,12 @@ import pathlib
 from abc import abstractmethod
 from typing import Union, Type, Iterable
 from datetime import datetime
-
 import torch
 import tqdm
 import wandb
-
-from ..data import DataModule
 import bmtrain as bmt
+from ..data import DataModule
+
 
 class BMKGModel(abc.ABC, bmt.DistributedModule):
     step = 0
@@ -31,21 +30,24 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
     def __init__(self, config: argparse.Namespace):
         super().__init__()
         self.config = config
-        self.lr = config.lr
+        self.lr = self.config.lr
         self.max_epoch = config.max_epoch
         self.logger = config.logger
         if self.logger == 'wandb':
-            wandb.init(
-                project="BMKG",
-                tags=[config.model],
-                entity="leo_test_team",
-                config=config
-            )
+            if bmt.rank() == 0:
+                wandb.init(
+                    project="BMKG",
+                    tags=[config.model],
+                    entity="leo_test_team",
+                    config=config
+                )
         now = datetime.now()
         self.ckpt_path = pathlib.Path(config.ckpt_path) / type(self).__name__ / now.strftime("%Y-%m-%d-%H-%M-%S")
         self.scores = []
         self.fused = config.fused
         self.best_models = []
+            
+        # TODO: INITIALIZE LOGGER
 
     @abstractmethod
     def forward(self, *args, **kwargs):
@@ -97,7 +99,6 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
         """
         pass
 
-
     def on_test_start(self) -> None:
         """
         on_test_start hook will be called before test starts.
@@ -128,7 +129,8 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
     def _save_model(self):
         self.ckpt_path.mkdir(parents=True, exist_ok=True)
         save_path = self.ckpt_path / f"epoch-{self.epoch}-{self.score_name}-{self.scores[-1]:.4f}.ckpt"
-        torch.save(self.state_dict(), save_path)
+        # torch.save(self.state_dict(), save_path)
+        bmt.save(self, save_path)
         self.best_models.append((self.scores[-1], save_path))
 
     def save_model(self) -> bool:
@@ -169,21 +171,25 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
             self.train()
             torch.set_grad_enabled(True)
             optim = self.configure_optimizers()
-            lr_scheduler = bmt.lr_scheduler.Noam(optim, start_lr=1e-3, warmup_iter=40, end_iter=1000, num_iter=0)
-            bmt.synchronize()
+            #lr_scheduler = bmt.lr_scheduler.Noam(optim, start_lr=1e-3, warmup_iter=40, end_iter=1000, num_iter=0)
+            #bmt.synchronize()
             self.train_pbar = tqdm.tqdm(total=self.max_epoch * len(self.train_data), desc="train")
             for _ in range(self.max_epoch):
                 self.on_epoch_start()
                 for data in self.train_data:
                     self.step += 1
-                    loss = self.train_step(data)
-                    if self.fused:
-                    #only when using fused optimizer in bmtrain
-                        loss = optimizer.loss_scale(loss)
                     optim.zero_grad()
-                    loss.backward()
-                    #optim.step()
-                    bmt.optim_step(optim, lr_scheduler)
+                    with bmt.inspect.inspect_tensor() as inspector:
+                        loss = self.train_step(data)
+                        if self.fused:
+                        #only when using fused optimizer in bmtrain
+                            loss = optim.loss_scale(loss)
+                        loss.backward()
+                        summary = inspector.get_summary()
+                        text_summary = bmt.inspect.format_summary(summary)
+                        bmt.print_rank(text_summary)
+                    bmt.optim_step(optim)
+                    #bmt.optim_step(optim, lr_scheduler)
                     self.train_pbar.update(1)
                 self.on_epoch_end()
                 self.step = 0
@@ -218,7 +224,8 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
         if len(self.best_models) != 0:
             path = max(self.best_models, key=lambda x: x[0])[1]
             logging.info(f"Loading best model {path=} to test")
-            self.load_state_dict(torch.load(path))
+            # self.load_state_dict(torch.load(path))
+            bmt.load(self, path)
         self.test_data = data_module.test
         self.data_module = data_module
         self.on_test_start()
@@ -234,10 +241,11 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
         torch.set_grad_enabled(True)
 
     def log(self, key: str, value: Union[int, float, torch.TensorType]):
-        if self.logger == 'wandb':
-            wandb.log({
-                key: value
-            })
+        if bmt.rank() == 0:
+            if self.logger == 'wandb':
+                wandb.log({
+                    key: value
+                })
         # raise NotImplementedError
 
     def log_hyperparameters(self):

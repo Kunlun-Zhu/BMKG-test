@@ -11,4 +11,5 @@ class TransE(TransX):
     def scoring_function(self, heads: torch.Tensor, rels: torch.Tensor, tails: torch.Tensor, *_):
         score = self.ent_embed(heads) + self.rel_embed(rels) - self.ent_embed(tails)
         score = torch.norm(score, p=self.p_norm, dim=-1)
+        ###bmtrain norm
         return score

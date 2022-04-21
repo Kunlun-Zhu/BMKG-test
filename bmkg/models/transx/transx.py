@@ -34,11 +34,12 @@ class TransX(BMKGModel, ABC):
         #self.rel_embed = nn.Embedding(config.rel_size, config.dim, max_norm=1)
         self.ent_embed = Embedding(config.ent_size, config.dim, max_norm=1)
         self.rel_embed = Embedding(config.rel_size, config.dim, max_norm=1)
-        nn.init.xavier_uniform_(self.ent_embed.weight.data)
-        nn.init.xavier_uniform_(self.rel_embed.weight.data)
+        #nn.init.xavier_uniform_(self.ent_embed.weight.data)
+        #nn.init.xavier_uniform_(self.rel_embed.weight.data)
         self.gamma = torch.Tensor([config.gamma]).cuda()
         self.p_norm = config.p_norm
         with torch.no_grad():
+            ###todo:bmtrain norm
             self.rel_embed.weight /= torch.norm(self.rel_embed.weight, p=self.p_norm, dim=-1)[:, None]
 
     @abstractmethod
@@ -161,7 +162,7 @@ class TransX(BMKGModel, ABC):
         if self.config.optim == "SGD":
             return torch.optim.SGD(self.parameters(), lr=self.lr)
         elif self.config.optim == "Adam":
-            return torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=0)
+            return bmt.optim.AdamOptimizer(self.parameters(), lr=self.lr, weight_decay=0, scale=2**20)
         elif self.config.optim == "Bmtrain":
             optimizer = bmt.optim.AdamOffloadOptimizer(self.parameters(), weight_decay=1e-2, scale=2**20)
 
