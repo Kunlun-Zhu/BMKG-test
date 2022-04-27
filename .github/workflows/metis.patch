@@ -1,0 +1,24 @@
+--- gk_arch.h	2022-04-05 20:53:09.222180900 +0800
++++ gk_arch_new.h	2022-04-05 20:47:08.410233200 +0800
+@@ -51,21 +51,11 @@
+ **************************************************************************/
+ #ifdef WIN32
+ typedef ptrdiff_t ssize_t;
+ #endif
+ 
+ 
+ #ifdef SUNOS
+ #define PTRDIFF_MAX  INT64_MAX
+ #endif
+ 
+-#ifdef __MSC__
+-/* MSC does not have rint() function */
+-#define rint(x) ((int)((x)+0.5))  
+-
+-/* MSC does not have INFINITY defined */
+-#ifndef INFINITY
+-#define INFINITY FLT_MAX
+-#endif
+-#endif
+-
+ #endif

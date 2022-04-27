@@ -47,7 +47,7 @@ class TripleDataLoader(DataLoader):
         parser = argparse.ArgumentParser(parents=[parser], add_help=False)
         parser.add_argument('--data_path', type=str, help="Data path")
         parser.add_argument('--train_batch_size', type=int, default=200, help="Train batch size")
-        parser.add_argument('--test_batch_size', type=int, default=10, help="Test batch size")
+        parser.add_argument('--test_batch_size', type=int, default=100, help="Test batch size")
         parser.add_argument('--data_files', type=str, nargs='+', help="Data filename, e.g. train.npy. If 1 file were"
                                                                       "given, it is treated as the training file, or "
                                                                       "evaluation file during evaluation. If 3 files "

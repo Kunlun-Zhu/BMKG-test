@@ -1,0 +1,124 @@
+name: Build and release
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+        architecture: x64
+    - run: |
+        sudo apt install libclang-dev libmetis-dev
+    - uses: messense/maturin-action@v1
+      with:
+        manylinux: auto
+        command: build
+        args: --release -o dist
+        container: off
+    - name: Upload wheels
+      uses: actions/upload-artifact@v2
+      with:
+        name: wheels
+        path: dist
+
+  # windows:
+  #   runs-on: windows-latest
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - uses: actions-rs/toolchain@v1
+  #     with:
+  #       profile: minimal
+  #       toolchain: stable
+  #       override: true
+  #   - uses: actions/setup-python@v2
+  #     with:
+  #       python-version: 3.9
+  #       architecture: x64
+  #   - uses: msys2/setup-msys2@v2
+  #   - name: Prepare METIS
+  #     shell: msys2 {0}
+  #     run: |
+  #       /usr/bin/wget http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/metis-5.1.0.tar.gz
+  #       /usr/bin/pacman -S tar patch --noconfirm
+  #       /usr/bin/tar -xzvf metis-5.1.0.tar.gz
+  #       cd metis-5.1.0
+  #       cd GKlib
+  #       /usr/bin/patch -p0 < ../../.github/workflows/metis.patch
+  #       cd ..
+  #   - name: Install METIS
+  #     shell: cmd {0}
+  #     run: |
+  #       "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+  #       cd metis-5.1.0
+  #       .\vsgen.bat -G "Visual Studio 17 2022"
+  #       cd build/windows
+  #       cmake --build . --config Release
+  #       cmake --install .
+  #   - uses: messense/maturin-action@v1
+  #     with:
+  #       command: build
+  #       args: --release --no-sdist -o dist
+  #       container: off
+  #   - name: Upload wheels
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: wheels
+  #       path: dist
+
+  # macos:
+  #   runs-on: macos-latest
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - uses: actions-rs/toolchain@v1
+  #     with:
+  #       profile: minimal
+  #       toolchain: stable
+  #       override: true
+  #   - name: Install METIS
+  #     run: |
+  #       mkdir -p target/debug/deps
+  #       ln -s /Library/Developer/CommandLineTools/usr/lib/libclang.dylib target/debug/deps
+  #       wget http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/metis-5.1.0.tar.gz
+  #       tar -xzvf metis-5.1.0.tar.gz
+  #       cd metis-5.1.0
+  #       make config
+  #       make -j2
+  #       make install
+  #   - uses: messense/maturin-action@v1
+  #     with:
+  #       command: build
+  #       args: --release --no-sdist -o dist --universal2
+  #       container: off
+  #   - name: Upload wheels
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: wheels
+  #       path: dist
+
+#  release:
+#    name: Release
+#    runs-on: ubuntu-latest
+#    if: "startsWith(github.ref, 'refs/tags/')"
+#    needs: [ macos, windows, linux ]
+#    steps:
+#      - uses: actions/download-artifact@v2
+#        with:
+#          name: wheels
+#      - name: Publish to PyPI
+#        uses: messense/maturin-action@v1
+#        env:
+#          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+#        with:
+#          command: upload
+#          args: --skip-existing *

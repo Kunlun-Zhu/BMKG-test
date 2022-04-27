@@ -1,0 +1,17 @@
+on: [push,pull_request]
+name: Format Check
+jobs:
+  format-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - name: setup environment
+        run: |
+          pip install PyGithub
+          pip install pycodestyle
+      - name: check
+        run: python $GITHUB_WORKSPACE/.github/workflows/check.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
