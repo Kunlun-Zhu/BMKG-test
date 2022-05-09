@@ -40,7 +40,7 @@ class TransX(BMKGModel, ABC):
         self.p_norm = config.p_norm
         with torch.no_grad():
             ###todo:bmtrain norm
-            self.rel_embed.weight /= torch.nn.Parameter(torch.norm(self.rel_embed.weight, p=self.p_norm, dim=-1)[:, None]).cuda()
+            self.rel_embed.weight /= torch.nn.Parameter(torch.norm(self.rel_embed.weight, p=self.p_norm, dim=-1)[:, None])
 
     @abstractmethod
     def scoring_function(self, heads, rels, tails, *args):
