@@ -39,12 +39,12 @@ class TransX(BMKGModel, ABC):
         self.gamma = torch.Tensor([config.gamma]).cuda()
         self.p_norm = config.p_norm
         
-        #ignore it now
-        '''
+ 
         with torch.no_grad():
             ###todo:bmtrain norm
-            self.rel_embed.weight /= torch.norm(self.rel_embed.weight.gather().detach(), p=self.p_norm, dim=-1)[:, None]
-        '''
+            #self.rel_embed.weight /= torch.norm(self.rel_embed.weight.gather().detach(), p=self.p_norm, dim=-1)[:, None]
+            self.rel_embed.weight.div_(torch.norm(self.rel_embed.weight, p=self.p_norm, dim=-1)[:, None])
+
     @abstractmethod
     def scoring_function(self, heads, rels, tails, *args):
         """
@@ -78,9 +78,12 @@ class TransX(BMKGModel, ABC):
             loss = F.relu(pos - neg + self.gamma).mean()
         else:
             raise ValueError("Invalid loss function")
-        self.log("train/loss", loss)
-        self.log("train/pos_score", pos.mean())
-        self.log("train/neg_score", neg.mean())
+        global_loss = bmt.sum_loss(loss)
+        global_pos = bmt.sum_loss(pos)
+        global_neg = bmt.sum_loss(neg)
+        self.log("train/loss", global_loss)
+        self.log("train/pos_score", global_pos.mean())
+        self.log("train/neg_score", global_neg.mean())
         return loss
 
     def on_valid_start(self) -> None:
@@ -181,10 +184,10 @@ class TransX(BMKGModel, ABC):
             return pos_score
 
     def on_epoch_start(self):
-        ''' ignore it now
         with torch.no_grad():
-            self.ent_embed.weight /= torch.norm(self.ent_embed.weight, p=self.p_norm, dim=-1)[:, None]
-        '''
+            #self.ent_embed.weight /= torch.norm(self.ent_embed.weight, p=self.p_norm, dim=-1)[:, None]
+            self.rel_embed.weight.div_(torch.norm(self.rel_embed.weight, p=self.p_norm, dim=-1)[:, None])
+
     @staticmethod
     def load_data() -> Type[DataModule]:
         return bmkg.data.TripleDataModule
