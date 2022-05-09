@@ -172,7 +172,7 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
             torch.set_grad_enabled(True)
             optim = self.configure_optimizers()
             #lr_scheduler = bmt.lr_scheduler.Noam(optim, start_lr=1e-3, warmup_iter=40, end_iter=1000, num_iter=0)
-            #bmt.synchronize()
+            bmt.synchronize()
             self.train_pbar = tqdm.tqdm(total=self.max_epoch * len(self.train_data), desc="train")
             for _ in range(self.max_epoch):
                 self.on_epoch_start()
