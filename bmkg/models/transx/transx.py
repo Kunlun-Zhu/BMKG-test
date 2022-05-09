@@ -181,9 +181,10 @@ class TransX(BMKGModel, ABC):
             return pos_score
 
     def on_epoch_start(self):
+        ''' ignore it now
         with torch.no_grad():
             self.ent_embed.weight /= torch.norm(self.ent_embed.weight, p=self.p_norm, dim=-1)[:, None]
-
+        '''
     @staticmethod
     def load_data() -> Type[DataModule]:
         return bmkg.data.TripleDataModule
