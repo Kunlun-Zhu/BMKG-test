@@ -38,10 +38,13 @@ class TransX(BMKGModel, ABC):
         #nn.init.xavier_uniform_(self.rel_embed.weight.data)
         self.gamma = torch.Tensor([config.gamma]).cuda()
         self.p_norm = config.p_norm
+        
+        #ignore it now
+        '''
         with torch.no_grad():
             ###todo:bmtrain norm
             self.rel_embed.weight /= torch.norm(self.rel_embed.weight.gather().detach(), p=self.p_norm, dim=-1)[:, None]
-
+        '''
     @abstractmethod
     def scoring_function(self, heads, rels, tails, *args):
         """
