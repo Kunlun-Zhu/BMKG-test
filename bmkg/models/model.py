@@ -197,11 +197,9 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
                 if self.epoch % self.config.valid_interval == 0:
                     self.train_pbar.write("Validating")
                     self.do_valid(data_module)
-                    '''
                     if self.save_model():
                         logging.info(f"Early stopping on {self.epoch=}")
                         return
-                    '''
         except KeyboardInterrupt:
             logging.warning("Stopping test!")
             logging.warning("Saving model, just in case")
