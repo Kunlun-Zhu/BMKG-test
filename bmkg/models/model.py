@@ -38,7 +38,7 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
                 wandb.init(
                     project="BMKG",
                     tags=[config.model],
-                    #entity="kunlunz",
+                    entity="kunlunz",
                     config=config
                 )
         now = datetime.now()
