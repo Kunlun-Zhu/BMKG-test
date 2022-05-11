@@ -179,15 +179,17 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
                 for data in self.train_data:
                     self.step += 1
                     optim.zero_grad()
-                    with bmt.inspect.inspect_tensor() as inspector:
-                        loss = self.train_step(data)
-                        if self.fused:
-                        #only when using fused optimizer in bmtrain
-                            loss = optim.loss_scale(loss)
-                        loss.backward()
-                        summary = inspector.get_summary()
-                        text_summary = bmt.inspect.format_summary(summary)
-                        bmt.print_rank(text_summary)
+                    #with bmt.inspect.inspect_tensor() as inspector:
+
+                    loss = self.train_step(data)
+                    #if self.fused:
+                    #only when using fused optimizer in bmtrain
+                    loss = optim.loss_scale(loss)
+                    loss.backward()
+                    #summary = inspector.get_summary()
+                    #text_summary = bmt.inspect.format_summary(summary)
+                    #bmt.print_rank(text_summary)
+
                     bmt.optim_step(optim)
                     #bmt.optim_step(optim, lr_scheduler)
                     self.train_pbar.update(1)
