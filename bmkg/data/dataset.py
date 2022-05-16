@@ -5,7 +5,6 @@ from typing import Any, Generator
 import numpy as np
 import random
 import torch
-
 from .._data import TripleDataBatch
 
 

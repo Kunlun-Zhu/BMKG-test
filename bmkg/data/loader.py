@@ -3,11 +3,11 @@ import pathlib
 from abc import ABC
 from typing import Iterable, Any
 import json
-
+import torch
 from .dataset import TripleDataset
 
 
-class DataLoader(ABC):
+class DataLoader(ABC, torch.utils.data.DataLoader):
     """
     DataLoader is responsible for constructing train, valid and test DataSets from command line arguments.
     """

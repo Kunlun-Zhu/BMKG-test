@@ -5,9 +5,9 @@ from typing import Iterable, Any, Union
 import json
 import numpy
 import torch
-
+import bmtrain as bmt
 from torch.utils.data import DataLoader
-
+import torch.utils.data as data
 from .data import TripleDataBatchGPU
 from .dataset import TripleDataset
 from .._data import TripleDataBatch
@@ -53,23 +53,35 @@ class TripleDataModule(DataModule):
             self.train_set = TripleDataset(path / config.data_files[0], batch_size=config.train_batch_size)
             self.valid_set = TripleDataset(path / config.data_files[1], batch_size=config.test_batch_size)
             self.test_set = TripleDataset(path / config.data_files[2], batch_size=config.test_batch_size)
+            
+            self.train_sampler = data.distributed.DistributedSampler(train_set, shuffle=shuffle, rank=bmt.rank(), num_replicas=bmt.world_size())
+            self.valid_sampler = data.distributed.DistributedSampler(valid_set, shuffle=shuffle, rank=bmt.rank(), num_replicas=bmt.world_size())
+            self.test_sampler = data.distributed.DistributedSampler(test_set, shuffle=shuffle, rank=bmt.rank(), num_replicas=bmt.world_size())
+            
+
             self.train = DataLoader(
                 self.train_set,
                 # num_workers=1,
                 batch_size=None,  # we don't use torch's auto data batching
-                collate_fn=self.collate_fn(negative_sample=True)
+                collate_fn=self.collate_fn(negative_sample=True),
+                shuffle=False,
+                sampler=train_sampler
             )
             self.valid = DataLoader(
                 self.valid_set,
                 # num_workers=1,
                 batch_size=None,  # we don't use torch's auto data batching
-                collate_fn=self.collate_fn()
+                collate_fn=self.collate_fn(),
+                shuffle=False,
+                sampler=valid_sampler
             )
             self.test = DataLoader(
                 self.test_set,
                 # num_workers=1,
                 batch_size=None,  # we don't use torch's auto data batching
-                collate_fn=self.collate_fn()
+                collate_fn=self.collate_fn(),
+                shuffle=False,
+                sampler=test_sampler
             )
 
         with open(path / "config.json") as f:
