@@ -127,6 +127,7 @@ class TransX(BMKGModel, ABC):
             neg_score[idx][head_map[(h, r)]] = float('inf')
         rank = torch.sum(neg_score <= pos_score.view(-1, 1), dim=1) + 1
         self.raw_ranks.append(raw_rank)
+
         self.ranks.append(rank)
 
         # corrupt tail
@@ -181,6 +182,7 @@ class TransX(BMKGModel, ABC):
             return pos_score, neg_score
         else:
             pos_score = self.scoring_function(pos.h, pos.r, pos.t)
+
             return pos_score
 
     def on_epoch_start(self):

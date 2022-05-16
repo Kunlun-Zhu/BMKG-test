@@ -27,6 +27,7 @@ class TransR(TransX):
         else:
             nn.init.xavier_uniform_(self.transfer_matrix.weight.data)
 
+
     def scoring_function(self, heads, rels, tails, *_):
         """
         :param heads: torch.Tensor() shaped (batch_size), containing the id for the head entity.

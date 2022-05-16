@@ -188,6 +188,7 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
                 self.on_epoch_end()
                 self.step = 0
                 self.epoch += 1
+
                 if self.epoch % self.config.valid_interval == 0:
                     self.train_pbar.write("Validating")
                     self.do_valid(data_module)
@@ -201,6 +202,7 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
             logging.warning("Saving model, just in case")
             logging.warning("Press Ctrl-C Again to force quit")
             self.save_model()
+
 
     @torch.no_grad()
     def do_valid(self, data_module: DataModule):

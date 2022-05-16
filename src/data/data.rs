@@ -11,6 +11,7 @@ pub struct TripleDataBatch {
     pub(crate) r: Py<PyArrayDyn<i32>>,
     #[pyo3(get, set)]
     pub(crate) t: Py<PyArrayDyn<i32>>,
+
 }
 
 create_exception!(bmkg, DataError, PyException);
@@ -24,6 +25,7 @@ impl TripleDataBatch {
         r: &PyArrayDyn<i32>,
         t: &PyArrayDyn<i32>,
     ) -> PyResult<Self> {
+
         let numpy = PyModule::import(py, "numpy")?;
         if numpy.getattr("broadcast")?.call1((h, r, t)).is_err() {
             return Err(DataError::new_err(format!(
