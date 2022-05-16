@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fmt;
 use std::fs::{create_dir_all, File};
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::PathBuf;
@@ -132,11 +131,11 @@ fn preprocess(py: Python, args: &PyAny) -> Result<(), PreprocessErrorWrap> {
         ids_map = graph_partition(data[files[0]].view(), &ent_vocab, n_part as i32)?;
         for graph in data.values_mut() {
             graph
-                .slice_mut(s![.., 0 as usize])
-                .par_mapv_inplace(|x| return ids_map[x as usize]);
+                .slice_mut(s![.., 0usize])
+                .par_mapv_inplace(|x| ids_map[x as usize]);
             graph
-                .slice_mut(s![.., 2 as usize])
-                .par_mapv_inplace(|x| return ids_map[x as usize]);
+                .slice_mut(s![.., 2usize])
+                .par_mapv_inplace(|x| ids_map[x as usize]);
         }
         Box::new(|x| ids_map[x as usize])
     } else {
@@ -165,7 +164,7 @@ fn preprocess(py: Python, args: &PyAny) -> Result<(), PreprocessErrorWrap> {
         // union vocab requires adding ent_vocab.len() to all relation embeddings.
         for graph in data.values_mut() {
             graph
-                .slice_mut(s![.., 1 as usize])
+                .slice_mut(s![.., 1usize])
                 .par_mapv_inplace(|x| x + ent_vocab.len() as i32);
         }
     } else {
@@ -249,15 +248,17 @@ fn graph_partition(
                 .push(*(x.get(0)?));
             Some(())
         })
-        .ok_or(PreprocessError::new_err(
-            "Could not build graph! Shouldn't happen. Please report a bug at BMKG repo",
-        ))?;
+        .ok_or_else(|| {
+            PreprocessError::new_err(
+                "Could not build graph! Shouldn't happen. Please report a bug at BMKG repo",
+            )
+        })?;
     info!("Adjacency nodes calculated! Generating xadj data...");
     let adjs: Vec<_> = adjs
         .into_iter()
         .map(|x| {
             let mut t = x.into_inner().unwrap();
-            t.sort();
+            t.sort_unstable();
             t.dedup();
             t
         })
@@ -273,7 +274,7 @@ fn graph_partition(
     info!("Doing partition...");
     // All set!
     let mut part = vec![0; ent_atoi.len()];
-    let cut = Graph::new(1i32, n_part, xadj.as_mut_slice(), adjncy.as_mut_slice())
+    Graph::new(1i32, n_part, xadj.as_mut_slice(), adjncy.as_mut_slice())
         .set_option(metis::option::NSeps(2))
         .part_kway(part.as_mut_slice())?;
     // Run two argsort to get id_map
@@ -282,16 +283,6 @@ fn graph_partition(
         let count = part.iter().filter(|x| **x == i).count();
         info!("Part {} has {} nodes", i, count);
     }
-    // debug!("cut: {}", cut);
-    // debug!("part: {:?}", &part);
-    // debug!("ids_map: {:?}", &ids_map);
-    // map the graph using ids_map
-    // unsafe { graph.as_array_mut() }
-    //     .slice_mut(s![.., 0])
-    //     .par_mapv_inplace(|x| return ids_map[x as usize]);
-    // unsafe { graph.as_array_mut() }
-    //     .slice_mut(s![.., 2])
-    //     .par_mapv_inplace(|x| return ids_map[x as usize]);
     let count: usize = graph
         .axis_iter(Axis(0))
         .filter_map(|x| -> Option<_> {

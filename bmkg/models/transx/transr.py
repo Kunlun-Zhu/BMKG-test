@@ -3,7 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import argparse
 from .transx import TransX
-
+from ..bmtlayers import Embedding
+import bmtrain as bmt
 
 class TransR(TransX):
 
@@ -16,7 +17,8 @@ class TransR(TransX):
         self.rand_init = rand_init
         self.ent_size = config.ent_size
 
-        self.transfer_matrix = nn.Embedding(config.rel_size, self.dim_e * self.dim_r)
+        self.transfer_matrix = Embedding(config.rel_size, self.dim_e * self.dim_r)
+        
         if not self.rand_init:
             identity = torch.eye(self.dim_e, self.dim_r)
             self.transfer_matrix.weight.data = identity \
@@ -24,6 +26,7 @@ class TransR(TransX):
                 .view(config.rel_size, self.dim_e * self.dim_r)
         else:
             nn.init.xavier_uniform_(self.transfer_matrix.weight.data)
+
 
     def scoring_function(self, heads, rels, tails, *_):
         """
