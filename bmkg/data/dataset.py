@@ -8,7 +8,7 @@ import torch
 from .._data import TripleDataBatch
 
 
-class TripleDataset(torch.utils.data.Dataset):
+class TripleDataset(torch.utils.data.IterableDataset):
     """
     Dataset is responsible for reading given data file and yield DataBatch.
 
@@ -50,7 +50,7 @@ class TripleDataset(torch.utils.data.Dataset):
                     yield data
                 else:
                     continue
-                    
+
         return iterator()
     
     '''
