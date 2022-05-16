@@ -54,9 +54,9 @@ class TripleDataModule(DataModule):
             self.valid_set = TripleDataset(path / config.data_files[1], batch_size=config.test_batch_size)
             self.test_set = TripleDataset(path / config.data_files[2], batch_size=config.test_batch_size)
             
-            self.train_sampler = data.distributed.DistributedSampler(self.train_set, shuffle=shuffle, rank=bmt.rank(), num_replicas=bmt.world_size())
-            self.valid_sampler = data.distributed.DistributedSampler(self.valid_set, shuffle=shuffle, rank=bmt.rank(), num_replicas=bmt.world_size())
-            self.test_sampler = data.distributed.DistributedSampler(self.test_set, shuffle=shuffle, rank=bmt.rank(), num_replicas=bmt.world_size())
+            self.train_sampler = data.distributed.DistributedSampler(self.train_set, shuffle=False, rank=bmt.rank(), num_replicas=bmt.world_size())
+            self.valid_sampler = data.distributed.DistributedSampler(self.valid_set, shuffle=False, rank=bmt.rank(), num_replicas=bmt.world_size())
+            self.test_sampler = data.distributed.DistributedSampler(self.test_set, shuffle=False, rank=bmt.rank(), num_replicas=bmt.world_size())
             
 
             self.train = DataLoader(
