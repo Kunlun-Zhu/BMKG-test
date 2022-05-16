@@ -1,14 +1,14 @@
 import math
 from abc import ABC
 from typing import Any, Generator
-
+import bmtrain as bmt
 import numpy as np
 import random
 import torch
 from .._data import TripleDataBatch
 
 
-class TripleDataset(torch.utils.data.IterableDataset):
+class TripleDataset(torch.utils.data.Dataset):
     """
     Dataset is responsible for reading given data file and yield DataBatch.
 
@@ -27,7 +27,7 @@ class TripleDataset(torch.utils.data.IterableDataset):
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.loop = loop
-
+    
     def __iter__(self) -> Generator[TripleDataBatch, Any, None]:
         worker_info = torch.utils.data.get_worker_info()
         if worker_info is None:
@@ -43,11 +43,21 @@ class TripleDataset(torch.utils.data.IterableDataset):
             starts = list(range(iter_start, iter_end, self.batch_size))
             if self.shuffle:
                 random.shuffle(starts)
-            for cur in starts:
-                batch = self.data[cur: cur + self.batch_size]
-                data = TripleDataBatch(batch[:, 0], batch[:, 1], batch[:, 2])
-                yield data
+            for idx, cur in enumerate(starts):
+                if (idx % bmt.world_size()) == bmt.rank():
+                    batch = self.data[cur: cur + self.batch_size]
+                    data = TripleDataBatch(batch[:, 0], batch[:, 1], batch[:, 2])
+                    yield data
+                else:
+                    continue
+                    
         return iterator()
-
+    
+    '''
+    def __getitem__(self, index) -> TripleDataBatch:
+        batch = self.data[index * self.batch_size: index * self.batch_size + self.batch_size]
+        data = TripleDataBatch(batch[:, 0], batch[:, 1], batch[:, 2])
+        return data
+    '''
     def __len__(self):
         return math.ceil((self.end - self.start) / self.batch_size)

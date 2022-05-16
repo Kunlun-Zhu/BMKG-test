@@ -53,35 +53,35 @@ class TripleDataModule(DataModule):
             self.train_set = TripleDataset(path / config.data_files[0], batch_size=config.train_batch_size)
             self.valid_set = TripleDataset(path / config.data_files[1], batch_size=config.test_batch_size)
             self.test_set = TripleDataset(path / config.data_files[2], batch_size=config.test_batch_size)
-            
+            '''
             self.train_sampler = data.distributed.DistributedSampler(self.train_set, shuffle=False, rank=bmt.rank(), num_replicas=bmt.world_size())
             self.valid_sampler = data.distributed.DistributedSampler(self.valid_set, shuffle=False, rank=bmt.rank(), num_replicas=bmt.world_size())
             self.test_sampler = data.distributed.DistributedSampler(self.test_set, shuffle=False, rank=bmt.rank(), num_replicas=bmt.world_size())
-            
+            '''
 
             self.train = DataLoader(
                 self.train_set,
                 # num_workers=1,
                 batch_size=None,  # we don't use torch's auto data batching
-                collate_fn=self.collate_fn(negative_sample=True),
-                shuffle=False,
-                sampler=self.train_sampler
+                collate_fn=self.collate_fn(negative_sample=True)
+                #shuffle=False,
+                #sampler=self.train_sampler
             )
             self.valid = DataLoader(
                 self.valid_set,
                 # num_workers=1,
                 batch_size=None,  # we don't use torch's auto data batching
-                collate_fn=self.collate_fn(),
-                shuffle=False,
-                sampler=self.valid_sampler
+                collate_fn=self.collate_fn()
+                #shuffle=False,
+                #sampler=self.valid_sampler
             )
             self.test = DataLoader(
                 self.test_set,
                 # num_workers=1,
                 batch_size=None,  # we don't use torch's auto data batching
-                collate_fn=self.collate_fn(),
-                shuffle=False,
-                sampler=self.test_sampler
+                collate_fn=self.collate_fn()
+                #shuffle=False,
+                #sampler=self.test_sampler
             )
 
         with open(path / "config.json") as f:
