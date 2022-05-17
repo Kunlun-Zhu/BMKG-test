@@ -183,7 +183,7 @@ class BMKGModel(abc.ABC, bmt.DistributedModule):
                     loss = optim.loss_scale(loss)
                     loss.backward()
                     bmt.optim_step(optim)
-
+                    bmt.synchronize()
                     self.train_pbar.update(1)
                 self.on_epoch_end()
                 self.step = 0

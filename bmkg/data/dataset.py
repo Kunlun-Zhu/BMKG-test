@@ -38,18 +38,39 @@ class TripleDataset(torch.utils.data.IterableDataset):
             worker_id = worker_info.id
             iter_start = self.start + worker_id * per_worker
             iter_end = min(iter_start + per_worker, self.end)
-
+        '''
         def iterator():
             starts = list(range(iter_start, iter_end, self.batch_size))
             if self.shuffle:
                 random.shuffle(starts)
             for idx, cur in enumerate(starts):
                 if (idx % bmt.world_size()) == bmt.rank():
+                    #print(idx, bmt.world_size(), bmt.rank())
                     batch = self.data[cur: cur + self.batch_size]
                     data = TripleDataBatch(batch[:, 0], batch[:, 1], batch[:, 2])
                     yield data
                 else:
                     continue
+        
+        def iterator():
+            starts = list(range(iter_start + self.batch_size * bmt.rank(), iter_end + self.batch_size * bmt.rank(), self.batch_size * bmt.world_size()))
+            if self.shuffle:
+                random.shuffle(starts)
+            for cur in starts:
+                #print(idx, bmt.world_size(), bmt.rank())
+                batch = self.data[cur: cur + self.batch_size]
+                data = TripleDataBatch(batch[:, 0], batch[:, 1], batch[:, 2])
+                yield data
+        '''
+        def iterator():
+            starts = list(range(iter_start, iter_end, self.batch_size))
+            if self.shuffle:
+                random.shuffle(starts)
+            for cur in starts:
+                #print(idx, bmt.world_size(), bmt.rank())
+                batch = self.data[cur: cur + self.batch_size]
+                data = TripleDataBatch(batch[:, 0], batch[:, 1], batch[:, 2])
+                yield data
 
         return iterator()
     
