@@ -1,4 +1,4 @@
-use numpy::PyArrayDyn;
+use numpy::PyArray1;
 use pyo3::{create_exception, exceptions::PyException, prelude::*};
 
 /// TripleDataBatch is a batch of triple data <h,r,t>, stored in 3 numpy arrays.
@@ -6,11 +6,11 @@ use pyo3::{create_exception, exceptions::PyException, prelude::*};
 #[pyo3(text_signature = "(h, r, t, /)")]
 pub struct TripleDataBatch {
     #[pyo3(get, set)]
-    pub(crate) h: Py<PyArrayDyn<i32>>,
+    h: Py<PyArray1<i32>>,
     #[pyo3(get, set)]
-    pub(crate) r: Py<PyArrayDyn<i32>>,
+    r: Py<PyArray1<i32>>,
     #[pyo3(get, set)]
-    pub(crate) t: Py<PyArrayDyn<i32>>,
+    t: Py<PyArray1<i32>>,
 }
 
 create_exception!(bmkg, DataError, PyException);
@@ -18,16 +18,10 @@ create_exception!(bmkg, DataError, PyException);
 #[pymethods]
 impl TripleDataBatch {
     #[new]
-    fn new(
-        py: Python,
-        h: &PyArrayDyn<i32>,
-        r: &PyArrayDyn<i32>,
-        t: &PyArrayDyn<i32>,
-    ) -> PyResult<Self> {
-        let numpy = PyModule::import(py, "numpy")?;
-        if numpy.getattr("broadcast")?.call1((h, r, t)).is_err() {
+    fn new(py: Python, h: &PyArray1<i32>, r: &PyArray1<i32>, t: &PyArray1<i32>) -> PyResult<Self> {
+        if h.shape() != r.shape() || r.shape() != t.shape() {
             return Err(DataError::new_err(format!(
-                "h, r, t should be broadcastable\n h: {:?}, r: {:?}, t: {:?}",
+                "h, r, t has differnet shape\n h: {:?}, r: {:?}, t: {:?}",
                 h.shape(),
                 r.shape(),
                 t.shape()

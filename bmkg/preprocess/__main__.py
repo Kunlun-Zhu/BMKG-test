@@ -19,6 +19,7 @@ def main():
                                                                              "path of the input data path")
     parser.add_argument('--partition', type=int, default=1, help="Whether to run graph partition algorithm "
                                                                  "and number of parts.")
+
     args = parser.parse_args()
     preprocess(args)
 
